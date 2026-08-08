@@ -1,0 +1,234 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   9Th-Grade AI — Design System
+   Deep-space, scientific, premium. Apple × Linear × Vercel.
+   ============================================================ */
+
+@theme {
+  /* Space surfaces — near-black deep space */
+  --color-space-950: #05060a;
+  --color-space-900: #080a12;
+  --color-space-850: #0b0e18;
+  --color-space-800: #101423;
+  --color-space-700: #171c30;
+  --color-space-600: #1f2540;
+
+  /* Ink */
+  --color-ink: #e8ecf6;
+  --color-ink-hi: #ffffff;
+  --color-ink-soft: #b8c0d4;
+  --color-muted: #8b94ab;
+  --color-faint: #5b6378;
+
+  /* Accent spectrum — restrained */
+  --color-accent: #4f7cff;
+  --color-accent-hi: #7d9dff;
+  --color-cyan: #4fd1ff;
+  --color-violet: #8b5cf6;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #fb7185;
+
+  --font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --font-bangla: 'Hind Siliguri', 'Noto Sans Bengali', 'Geist', 'Inter', sans-serif;
+  /* Editorial serif for elegant display accents */
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+/* ---------- Base ---------- */
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-space-950);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(79, 124, 255, 0.35);
+  color: #fff;
+}
+
+/* Thin, subtle scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid var(--color-space-950);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- Utilities ---------- */
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+@utility glass-strong {
+  background: rgba(10, 12, 22, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+@utility text-gradient {
+  background: linear-gradient(100deg, #fff 0%, #cdd6f5 45%, #4f7cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-accent {
+  background: linear-gradient(95deg, #4f7cff 0%, #22d3ee 55%, #8b5cf6 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Editorial serif italic — an elegant accent for headline emphasis words. */
+@utility font-display {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+@utility ring-glow {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 40px -12px rgba(79, 124, 255, 0.45);
+}
+
+@utility grid-fade {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 75%);
+}
+
+@utility hairline {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Bangla-aware text: allow Bangla glyphs to render with the Bangla font. */
+@utility lang-bn {
+  font-family: var(--font-bangla);
+}
+
+/* Noise overlay for cinematic texture */
+.noise::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Keyframe animations ---------- */
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-40px, -20px, 0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@utility animate-drift {
+  animation: drift 14s ease-in-out infinite alternate;
+}
+
+@utility animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+@utility animate-spin-slow {
+  animation: spin-slow 24s linear infinite;
+}
+
+@utility animate-orbit-float {
+  animation: orbit-float 6s ease-in-out infinite;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
