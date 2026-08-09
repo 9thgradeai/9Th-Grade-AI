@@ -336,6 +336,7 @@ export const api = {
 | **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating | ✅ Done |
 | **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring | ✅ Done |
 | **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening | ✅ Done |
+| **8: Admin & Auth** | 13 | Admin API (questions/analytics), Password Reset, Email Verification | ✅ Done |
 
 ---
 

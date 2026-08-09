@@ -18,6 +18,7 @@ import { strategyRoutes } from './routes/strategy'
 import { revisionRoutes } from './routes/revision'
 import { paymentsRoutes, webhookRoute } from './routes/payments'
 import { realtimeRoutes } from './routes/realtime'
+import { adminRoutes } from './routes/admin'
 import { authMiddleware } from './middleware/auth'
 import type { AppEnv } from './types/env'
 
@@ -80,6 +81,7 @@ protectedApp.route('/', strategyRoutes)
 protectedApp.route('/revision', revisionRoutes)
 protectedApp.route('/payments', paymentsRoutes)
 protectedApp.route('/realtime', realtimeRoutes)
+protectedApp.route('/admin', adminRoutes)
 
 // Public webhook — mounted outside auth (before /api) so Stripe can reach it.
 app.route('/api/payments/webhook', webhookRoute)

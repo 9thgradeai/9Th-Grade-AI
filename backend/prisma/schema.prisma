@@ -13,15 +13,20 @@ datasource db {
 // ─── Users & Auth ──────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?
-  name      String
-  firstName String
-  timezone  String   @default("Asia/Dhaka")
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String?
+  name              String
+  firstName         String
+  timezone          String   @default("Asia/Dhaka")
+  avatar            String?
+  role              String   @default("user") // user | admin
+  emailVerified     Boolean  @default(false)
+  verificationToken String?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   accounts          Account[]
   sessions          Session[]
