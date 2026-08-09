@@ -332,6 +332,11 @@ model RevisionItem {
   nextReview     DateTime
   overdue        Boolean  @default(false)
 
+  // SM-2 state
+  repetition     Int      @default(0)
+  easinessFactor Float    @default(2.5)
+  interval       Int      @default(0) // days
+
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 

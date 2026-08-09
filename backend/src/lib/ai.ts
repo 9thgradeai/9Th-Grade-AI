@@ -9,6 +9,7 @@
    ============================================================ */
 
 import { prisma } from '../app'
+import { ensureRevisionItems } from './sm2'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -244,10 +245,12 @@ export async function diagnoseTest(testId: string, userId: string): Promise<Diag
 
   const modes: Record<string, number> = { 'concept-gap': 0, 'time-pressure': 0, careless: 0, 'difficulty-gap': 0 }
   const classified: ClassifiedError[] = []
+  const errorTopicIds = new Set<string>()
 
   for (const a of attempts) {
     if (a.correct) continue
     const q = a.question
+    errorTopicIds.add(q.topicId)
     let mode: ClassifiedError['mode']
     const overTarget = a.timeSpentSeconds > q.targetSeconds * 1.5
     const highConfidence = a.confidence >= 4
@@ -258,6 +261,11 @@ export async function diagnoseTest(testId: string, userId: string): Promise<Diag
     else mode = 'concept-gap'
     modes[mode] += 1
     classified.push({ mode, subject: q.topic.subject.name, topic: q.topic.name })
+  }
+
+  // Phase 4: schedule the error topics into the spaced-repetition queue.
+  if (errorTopicIds.size > 0) {
+    await ensureRevisionItems(userId, [...errorTopicIds])
   }
 
   // Persist recommendations derived from the diagnosis.
