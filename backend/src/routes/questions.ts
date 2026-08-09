@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
+import { cacheGet, cacheSet, cacheKey } from '../lib/cache'
 
 /* ============================================================
    Question routes — study/practice question bank.
@@ -17,6 +18,11 @@ questionRoutes.get('/:topicId', async (c) => {
   const limit = Math.min(Number(q.limit ?? 20) || 20, 50)
   const offset = Number(q.offset ?? 0) || 0
 
+  // Question bank is static — cache a page by its query.
+  const key = cacheKey('questions', topicId, difficulty ?? 'any', limit, offset)
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
+
   const where = {
     topicId,
     ...(difficulty && !Number.isNaN(difficulty) ? { difficulty } : {}),
@@ -32,5 +38,7 @@ questionRoutes.get('/:topicId', async (c) => {
     }),
   ])
 
-  return c.json({ total, offset, limit, questions })
+  const body = { total, offset, limit, questions }
+  await cacheSet(key, body, 300)
+  return c.json(body)
 })

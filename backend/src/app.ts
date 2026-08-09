@@ -1,8 +1,11 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { compress } from 'hono/compress'
 import { PrismaClient } from '@prisma/client'
 import { structuredLogger } from './middleware/logger'
 import { rateLimit } from './middleware/rateLimit'
+import { securityHeaders } from './middleware/security'
+import { cacheMode } from './lib/cache'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { examRoutes } from './routes/exams'
@@ -29,6 +32,8 @@ const app = new Hono()
 
 // Global middleware
 app.use('*', structuredLogger)
+app.use('*', compress())
+app.use('*', securityHeaders)
 app.use('*', cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
@@ -47,6 +52,7 @@ app.get('/api/health', async (c) => {
     db,
     uptime: Math.floor(process.uptime()),
     mode: process.env.NODE_ENV || 'development',
+    cache: cacheMode,
     mock: {
       stripe: !process.env.STRIPE_SECRET_KEY,
       email: !process.env.RESEND_API_KEY,

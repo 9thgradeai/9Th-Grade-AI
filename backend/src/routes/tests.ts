@@ -11,6 +11,7 @@ import {
 import { diagnoseTest, recommendDifficulty } from '../lib/ai'
 import { realtime } from '../lib/realtime'
 import { sendEmail } from '../lib/email'
+import { cacheDel, cacheKey } from '../lib/cache'
 
 /* ============================================================
    Test lifecycle — build, take, submit, grade.
@@ -279,6 +280,11 @@ testRoutes.post('/:id/submit', async (c) => {
       text: `Hi ${user.name || 'there'},\n\nYou scored ${result.score}% (${result.correct}/${result.total}) on "${test.name}".\n\n${result.diagnosis}\nNext: ${result.nextBestAction}\n\n— The 9Th-Grade AI team`,
     })
   }
+
+  // Phase 7: performance/rank/strategy all changed — drop their caches.
+  await cacheDel(cacheKey('rank', test.examId, userId))
+  await cacheDel(cacheKey('strategy', userId))
+  await cacheDel(cacheKey('briefing', userId))
 
   return c.json({ result })
 })

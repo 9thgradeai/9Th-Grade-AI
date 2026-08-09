@@ -17,6 +17,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.0",
     "@prisma/client": "^6.9.0",
+    "@upstash/redis": "^1.38.2",
     "bcryptjs": "^2.4.3",
     "hono": "^4.8.0",
     "jsonwebtoken": "^9.0.2",

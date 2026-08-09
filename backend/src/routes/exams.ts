@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../app'
+import { cacheGet, cacheSet, cacheKey } from '../lib/cache'
 
 /* ============================================================
    Exam routes — exams, subjects, topics.
@@ -7,11 +8,15 @@ import { prisma } from '../app'
 
 export const examRoutes = new Hono()
 
-// List all exams
+// List all exams (catalog is static — cache it).
 examRoutes.get('/', async (c) => {
+  const key = cacheKey('exams', 'list')
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
   const exams = await prisma.exam.findMany({
     orderBy: { name: 'asc' },
   })
+  await cacheSet(key, exams, 300)
   return c.json(exams)
 })
 
@@ -23,9 +28,13 @@ examRoutes.get('/:slug', async (c) => {
   return c.json(exam)
 })
 
-// List subjects for exam
+// List subjects for exam (catalog is static — cache it).
 examRoutes.get('/:slug/subjects', async (c) => {
   const slug = c.req.param('slug')
+  const key = cacheKey('subjects', slug)
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
+
   const exam = await prisma.exam.findUnique({ where: { slug } })
   if (!exam) return c.json({ error: 'Exam not found' }, 404)
 
@@ -35,6 +44,7 @@ examRoutes.get('/:slug/subjects', async (c) => {
     include: { topics: true },
   })
 
+  await cacheSet(key, subjects, 300)
   return c.json(subjects)
 })
 

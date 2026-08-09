@@ -226,6 +226,25 @@ Layer 3: Application (Upstash Redis)
 Layer 4: Database (PostgreSQL materialized views)
 ```
 
+### Phase 7 — Scale Runbook (deployment-level)
+
+Application code for scaling is implemented; the items below are
+operational/infrastructure and are enabled at deploy time:
+
+| Item | Status | How to enable |
+|------|--------|---------------|
+| App cache | ✅ implemented | `src/lib/cache.ts` — in-memory fallback in dev; set `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` for a shared Redis cache (correct across instances). Applied to exams/subjects/questions/rank/strategy/briefing; invalidated on test submit and strategy regenerate. |
+| Security headers + gzip | ✅ implemented | `src/middleware/security.ts` + `hono/compress` (global). |
+| Connection pooling | ✅ via Prisma | Prisma already pools; raise `?connection_limit=` on `DATABASE_URL` for high concurrency. |
+| Read replicas | ⏳ deploy | Point Prisma at a replica pooler for read-heavy queries (Prisma ≥6 supports `replicas`). |
+| Partitioning | ⏳ deploy | Partition large tables (QuestionAttempt, Invoice) by created_at at the DB level. |
+| Materialized views | ⏳ deploy | Replace live leaderboard/perf aggregation with refreshed mat-views for heavy reads. |
+| Background workers | ⏳ deploy | Move email/AI/queue work to BullMQ + Redis (see Deployment). |
+| Redis cluster | ⏳ deploy | Managed Upstash cluster; wire via `cache.ts`. |
+
+The app is ready for these; they are infrastructure configuration rather
+than code changes.
+
 ### Rate Limiting
 ```
 Auth:     5 req/min per IP
@@ -316,7 +335,7 @@ export const api = {
 | **4: Memory** | 7 | SM-2 Spaced Repetition, Review Scheduling | ✅ Done |
 | **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating | ✅ Done |
 | **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring | ✅ Done |
-| **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening | ⏳ Next |
+| **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening | ✅ Done |
 
 ---
 

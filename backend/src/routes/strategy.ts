@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
 import { rateLimit } from '../middleware/rateLimit'
+import { cacheGet, cacheSet, cacheDel, cacheKey } from '../lib/cache'
 import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
 
 /* ============================================================
@@ -95,17 +96,25 @@ async function upsertRoadmap(
 // GET /api/strategy — current roadmap (created on first visit if missing).
 strategyRoutes.get('/strategy', async (c) => {
   const userId = c.get('userId') as string
+  const key = cacheKey('strategy', userId)
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
+
   const exam = await primaryExam(userId)
   if (!exam) return c.json({ error: 'No exam configured' }, 500)
 
   const existing = await prisma.roadmap.findUnique({
     where: { userId_examId: { userId, examId: exam.id } },
   })
-  if (existing) {
-    return c.json({ examId: exam.id, roadmap: serializeRoadmap(existing) })
-  }
-  const roadmap = await upsertRoadmap(userId, exam.id, exam.name, DEFAULT_EXAM_DATE, 90)
-  return c.json({ examId: exam.id, roadmap })
+  const body = existing
+    ? { examId: exam.id, roadmap: serializeRoadmap(existing) }
+    : await upsertRoadmap(userId, exam.id, exam.name, DEFAULT_EXAM_DATE, 90).then((roadmap) => ({
+        examId: exam.id,
+        roadmap,
+      }))
+
+  await cacheSet(key, body, 300)
+  return c.json(body)
 })
 
 const regenSchema = z.object({
@@ -126,6 +135,11 @@ strategyRoutes.post('/strategy/regenerate', async (c) => {
 
   const examDate = parsed.data.examDate ? new Date(parsed.data.examDate) : DEFAULT_EXAM_DATE
   const roadmap = await upsertRoadmap(userId, exam.id, exam.name, examDate, parsed.data.targetMastery ?? 90)
+
+  // Strategy changed — drop the cached roadmap/briefing for this user.
+  await cacheDel(cacheKey('strategy', userId))
+  await cacheDel(cacheKey('briefing', userId))
+
   return c.json({ examId: exam.id, roadmap })
 })
 
@@ -157,6 +171,10 @@ strategyRoutes.patch('/ai/recommendations/:id', async (c) => {
 // GET /api/ai/briefing
 strategyRoutes.get('/ai/briefing', async (c) => {
   const userId = c.get('userId') as string
+  const key = cacheKey('briefing', userId)
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
+
   const exam = await primaryExam(userId)
   if (!exam) return c.json({ error: 'No exam configured' }, 500)
 
@@ -187,6 +205,7 @@ strategyRoutes.get('/ai/briefing', async (c) => {
   if (items.length === 0) items.push('Run a diagnostic test to unlock your AI briefing.')
 
   const briefing = { id: `brief_${Date.now()}`, title: 'AI Daily Briefing', items }
+  await cacheSet(key, { briefing }, 60)
   return c.json({ briefing })
 })
 

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
+import { cacheGet, cacheSet, cacheKey } from '../lib/cache'
 
 /* ============================================================
    Rank routes — per-exam leaderboard derived from real results.
@@ -23,6 +24,11 @@ rankRoutes.get('/leaderboard', async (c) => {
   if (!resolvedExamId) {
     return c.json({ examId: null, leaderboard: [], me: null })
   }
+
+  // Short-lived, per-user + per-exam cache (invalidated on test submit).
+  const key = cacheKey('rank', resolvedExamId, userId)
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
 
   const grouped = await prisma.testResult.groupBy({
     by: ['userId'],
@@ -51,7 +57,9 @@ rankRoutes.get('/leaderboard', async (c) => {
 
   const myRank = leaderboard.find((l) => l.userId === userId)?.rank ?? null
 
-  return c.json({ examId: resolvedExamId, leaderboard, me: myRank })
+  const body = { examId: resolvedExamId, leaderboard, me: myRank }
+  await cacheSet(key, body, 60)
+  return c.json(body)
 })
 
 // GET /api/rank/me
