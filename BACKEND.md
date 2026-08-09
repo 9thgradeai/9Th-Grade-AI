@@ -308,15 +308,15 @@ export const api = {
 
 ## Implementation Phases
 
-| Phase | Weeks | Deliverables |
-|-------|-------|-------------|
-| **1: Foundation** | 1-2 | DB schema, Prisma, Auth, User CRUD, API framework |
-| **2: Core Data** | 3-4 | Exams, Subjects, Questions, Tests, Performance |
-| **3: AI Engine** | 5-6 | Strategy, Adaptive Difficulty, Diagnosis, Daily Tasks |
-| **4: Memory** | 7 | SM-2 Spaced Repetition, Review Scheduling |
-| **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating |
-| **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring |
-| **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening |
+| Phase | Weeks | Deliverables | Status |
+|-------|-------|-------------|--------|
+| **1: Foundation** | 1-2 | DB schema, Prisma, Auth, User CRUD, API framework | ✅ Done |
+| **2: Core Data** | 3-4 | Exams, Subjects, Questions, Tests, Performance | ✅ Done |
+| **3: AI Engine** | 5-6 | Strategy, Adaptive Difficulty, Diagnosis, Daily Tasks | ⏳ Next |
+| **4: Memory** | 7 | SM-2 Spaced Repetition, Review Scheduling | — |
+| **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating | — |
+| **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring | — |
+| **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening | — |
 
 ---
 

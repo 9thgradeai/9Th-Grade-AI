@@ -5,6 +5,11 @@ import { PrismaClient } from '@prisma/client'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { examRoutes } from './routes/exams'
+import { questionRoutes } from './routes/questions'
+import { testRoutes } from './routes/tests'
+import { performanceRoutes } from './routes/performance'
+import { dashboardRoutes } from './routes/dashboard'
+import { rankRoutes } from './routes/rank'
 import { authMiddleware } from './middleware/auth'
 import type { AppEnv } from './types/env'
 
@@ -37,6 +42,11 @@ const protectedApp = new Hono<AppEnv>()
 protectedApp.use('*', authMiddleware)
 protectedApp.route('/users', userRoutes)
 protectedApp.route('/exams', examRoutes)
+protectedApp.route('/questions', questionRoutes)
+protectedApp.route('/tests', testRoutes)
+protectedApp.route('/performance', performanceRoutes)
+protectedApp.route('/dashboard', dashboardRoutes)
+protectedApp.route('/rank', rankRoutes)
 
 app.route('/api', protectedApp)
 
