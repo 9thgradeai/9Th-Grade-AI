@@ -12,6 +12,7 @@ import { dashboardRoutes } from './routes/dashboard'
 import { rankRoutes } from './routes/rank'
 import { strategyRoutes } from './routes/strategy'
 import { revisionRoutes } from './routes/revision'
+import { paymentsRoutes, webhookRoute } from './routes/payments'
 import { authMiddleware } from './middleware/auth'
 import type { AppEnv } from './types/env'
 
@@ -51,6 +52,10 @@ protectedApp.route('/dashboard', dashboardRoutes)
 protectedApp.route('/rank', rankRoutes)
 protectedApp.route('/', strategyRoutes)
 protectedApp.route('/revision', revisionRoutes)
+protectedApp.route('/payments', paymentsRoutes)
+
+// Public webhook — mounted outside auth (before /api) so Stripe can reach it.
+app.route('/api/payments/webhook', webhookRoute)
 
 app.route('/api', protectedApp)
 

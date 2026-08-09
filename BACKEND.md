@@ -314,8 +314,8 @@ export const api = {
 | **2: Core Data** | 3-4 | Exams, Subjects, Questions, Tests, Performance | ✅ Done |
 | **3: AI Engine** | 5-6 | Strategy, Adaptive Difficulty, Diagnosis, Daily Tasks | ✅ Done |
 | **4: Memory** | 7 | SM-2 Spaced Repetition, Review Scheduling | ✅ Done |
-| **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating | ⏳ Next |
-| **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring | — |
+| **5: Payments** | 8 | Stripe, Subscriptions, Feature Gating | ✅ Done |
+| **6: Real-time** | 9-10 | WebSocket, Email, Rate Limiting, Monitoring | ⏳ Next |
 | **7: Scale** | 11-12 | Read Replicas, Cache, Partitioning, Hardening | — |
 
 ---
