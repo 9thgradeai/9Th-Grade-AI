@@ -10,6 +10,7 @@ import { testRoutes } from './routes/tests'
 import { performanceRoutes } from './routes/performance'
 import { dashboardRoutes } from './routes/dashboard'
 import { rankRoutes } from './routes/rank'
+import { strategyRoutes } from './routes/strategy'
 import { authMiddleware } from './middleware/auth'
 import type { AppEnv } from './types/env'
 
@@ -47,6 +48,7 @@ protectedApp.route('/tests', testRoutes)
 protectedApp.route('/performance', performanceRoutes)
 protectedApp.route('/dashboard', dashboardRoutes)
 protectedApp.route('/rank', rankRoutes)
+protectedApp.route('/', strategyRoutes)
 
 app.route('/api', protectedApp)
 

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
+import { planDailyTasks } from '../lib/ai'
 
 /* ============================================================
    Dashboard routes — quick stats + a rule-based daily task plan.
@@ -61,43 +62,16 @@ dashboardRoutes.get('/daily-tasks', async (c) => {
   })
   if (existing.length > 0) return c.json({ tasks: existing })
 
-  // No plan yet today — build one from the user's weakest topics.
-  const weakTopics = await prisma.userTopic.findMany({
-    where: { userId },
-    orderBy: { accuracy: 'asc' },
-    take: 3,
-    include: { topic: { include: { subject: true } } },
-  })
+  // No plan yet today — the AI engine plans it from the weakest topics.
+  const examId =
+    (await prisma.testResult
+      .findFirst({ where: { userId }, select: { test: { select: { examId: true } } } })
+      .then((r) => r?.test.examId)) ??
+    (await prisma.exam.findFirst())?.id
+  if (!examId) return c.json({ error: 'No exam configured' }, 500)
 
-  const pick = weakTopics.length
-    ? weakTopics.map((ut) => ({ topic: ut.topic, mastery: ut.accuracy }))
-    : await prisma.topic
-        .findMany({ include: { subject: true }, take: 3, orderBy: { name: 'asc' } })
-        .then((ts) => ts.map((t) => ({ topic: t, mastery: 0 })))
-
-  const templates = [
-    { kind: 'practice', minutes: 20, priority: 'high', impact: 'high', expectedQuestions: 10 },
-    { kind: 'revision', minutes: 15, priority: 'medium', impact: 'medium', expectedQuestions: null },
-    { kind: 'test', minutes: 25, priority: 'medium', impact: 'high', expectedQuestions: 15 },
-  ]
-
-  const tasks = pick.map((p, i) => {
-    const t = templates[i % templates.length]
-    return {
-      userId,
-      subject: p.topic.subject.name,
-      topic: p.topic.name,
-      kind: t.kind,
-      durationMinutes: t.minutes,
-      priority: t.priority,
-      impact: t.impact,
-      expectedQuestions: t.expectedQuestions,
-      status: 'pending' as const,
-      date: new Date(),
-    }
-  })
-
-  const created = await prisma.dailyTask.createManyAndReturn({ data: tasks })
+  const plan = await planDailyTasks(userId, examId, 3)
+  const created = await prisma.dailyTask.createManyAndReturn({ data: plan })
   return c.json({ tasks: created })
 })
 

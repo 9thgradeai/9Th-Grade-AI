@@ -8,6 +8,7 @@ import {
   refreshPerformance,
   type GradedQuestion,
 } from '../lib/score'
+import { diagnoseTest, recommendDifficulty } from '../lib/ai'
 
 /* ============================================================
    Test lifecycle — build, take, submit, grade.
@@ -38,6 +39,8 @@ const buildSchema = z.object({
   count: z.number().int().min(1).max(50).optional(),
   name: z.string().optional(),
   kind: z.string().optional(),
+  /** AI-adaptive: bias the sampled questions to the user's current level. */
+  adaptive: z.boolean().optional(),
 })
 
 // POST /api/tests/build
@@ -48,7 +51,7 @@ testRoutes.post('/build', async (c) => {
   if (!parsed.success) {
     return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
   }
-  const { examId, subjectId, topicId, count = 10, name, kind } = parsed.data
+  const { examId, subjectId, topicId, count = 10, name, kind, adaptive } = parsed.data
 
   // Resolve scope. A more specific scope wins.
   let scopeWhere = {}
@@ -88,7 +91,16 @@ testRoutes.post('/build', async (c) => {
   if (pool.length === 0) {
     return c.json({ error: 'No questions available for this scope' }, 404)
   }
-  const selected = shuffle(pool).slice(0, Math.min(count, pool.length))
+
+  // AI-adaptive sampling: bias toward the user's recommended difficulty.
+  let sampledPool = pool
+  if (adaptive) {
+    const level = await recommendDifficulty(userId, resolvedSubjectId ?? undefined)
+    const near = pool.filter((q) => Math.abs(q.difficulty - level) <= 1)
+    if (near.length > 0) sampledPool = near
+  }
+
+  const selected = shuffle(sampledPool).slice(0, Math.min(count, sampledPool.length))
   const questionIds = selected.map((q) => q.id)
   const durationMinutes = Math.max(1, Math.round(selected.reduce((s, q) => s + q.targetSeconds, 0) / 60))
 
@@ -246,6 +258,9 @@ testRoutes.post('/:id/submit', async (c) => {
   await upsertProgress(userId, graded, submittedAttempts)
 
   await refreshPerformance(userId, test.examId, result.timeSpentMinutes)
+
+  // Phase 3: persist AI recommendations from the diagnosis.
+  await diagnoseTest(test.id, userId)
 
   return c.json({ result })
 })
