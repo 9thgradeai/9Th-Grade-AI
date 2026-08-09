@@ -144,6 +144,9 @@ export function createUniverseController(opts: {
   let flashAlpha = 0
   let blastTriggered = false
 
+  /* ---------- Cached per-size gradients (avoid rebuilding each frame) ---------- */
+  let vignette: CanvasGradient | null = null
+
   /* ---------- Noise ---------- */
   const noise = createNoise2D(42)
 
@@ -581,11 +584,8 @@ export function createUniverseController(opts: {
       ctx.translate(shakeX, shakeY)
     }
 
-    // Depth vignette
-    const vg = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
-    vg.addColorStop(0, 'rgba(0,0,0,0)')
-    vg.addColorStop(1, 'rgba(0,0,0,0.28)')
-    ctx.fillStyle = vg
+    // Depth vignette — cached, rebuilt only when the canvas size changes
+    ctx.fillStyle = vignette ?? 'rgba(0,0,0,0)'
     ctx.fillRect(0, 0, w, h)
 
     const fr = buildFrame()
@@ -663,6 +663,11 @@ export function createUniverseController(opts: {
     canvas.style.width = `${w}px`
     canvas.style.height = `${h}px`
     ctx.setTransform(quality.dpr, 0, 0, quality.dpr, 0, 0)
+    // Rebuild the cached vignette gradient for the new size
+    const vg = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
+    vg.addColorStop(0, 'rgba(0,0,0,0)')
+    vg.addColorStop(1, 'rgba(0,0,0,0.28)')
+    vignette = vg
     poolSize = Math.round(cfg.poolSize * (quality.isMobile ? 0.42 : 1))
     pool = createPool(poolSize)
     seed()

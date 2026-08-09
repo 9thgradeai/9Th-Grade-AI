@@ -95,6 +95,8 @@ export function LivingUniverse({
 
   const [ctrl, setCtrl] = useState<UniverseController | null>(null)
 
+  const rectRef = useRef({ left: 0, top: 0, width: 0, height: 0 })
+
   useEffect(() => {
     const canvas = canvasRef.current
     const container = containerRef.current
@@ -103,19 +105,38 @@ export function LivingUniverse({
     controllerRef.current = controller
     setCtrl(controller)
 
-    const ro = new ResizeObserver(() => {
+    // Keep the cached rect in sync — avoids a forced layout read on
+    // every mousemove while the cursor is over the container.
+    const measure = () => {
       const rect = container.getBoundingClientRect()
+      rectRef.current = { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+      return rectRef.current
+    }
+    measure()
+
+    const ro = new ResizeObserver(() => {
+      const rect = measure()
       controller.resize(Math.max(1, rect.width), Math.max(1, rect.height))
     })
     ro.observe(container)
 
     const onMove = (e: MouseEvent) => {
       if (!interactiveRef.current) return
-      const rect = container.getBoundingClientRect()
+      const rect = rectRef.current
       controller.setCursor(e.clientX - rect.left, e.clientY - rect.top)
     }
     const onLeave = () => controller.setCursor(-9999, -9999)
     const onVisibility = () => controller.setVisible(!document.hidden)
+
+    // Pause the render loop entirely while the canvas is scrolled out
+    // of the viewport. The landing "fixed" canvas is always visible and
+    // keeps running; absolute canvases inside scrollable pages freeze
+    // until scrolled back into view.
+    const io = new IntersectionObserver(
+      (entries) => controller.setVisible(entries[0]?.isIntersecting ?? true),
+      { rootMargin: '120px' },
+    )
+    io.observe(container)
 
     container.addEventListener('mousemove', onMove)
     container.addEventListener('mouseleave', onLeave)
@@ -124,6 +145,7 @@ export function LivingUniverse({
     return () => {
       controller.destroy()
       ro.disconnect()
+      io.disconnect()
       container.removeEventListener('mousemove', onMove)
       container.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)

@@ -51,7 +51,13 @@ export function useUniverseState(): UniverseView {
   const lastTimeRef = useRef(performance.now())
 
   useEffect(() => {
+    let raf = 0
+
+    // Coalesce the high-frequency scroll/resize events to a single
+    // update per animation frame instead of re-rendering the whole
+    // landing tree on every scroll tick.
     function compute() {
+      raf = 0
       const doc = document.documentElement
       const max = doc.scrollHeight - window.innerHeight
       const raw = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
@@ -74,12 +80,17 @@ export function useUniverseState(): UniverseView {
       })
     }
 
+    function schedule() {
+      if (raf === 0) raf = requestAnimationFrame(compute)
+    }
+
     compute()
-    window.addEventListener('scroll', compute, { passive: true })
-    window.addEventListener('resize', compute)
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
     return () => {
-      window.removeEventListener('scroll', compute)
-      window.removeEventListener('resize', compute)
+      if (raf !== 0) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
     }
   }, [])
 

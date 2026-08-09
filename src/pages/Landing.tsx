@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Hero } from '@/components/landing/Hero'
 import { ProblemSection } from '@/components/landing/ProblemSection'
 import { CoreLoop } from '@/components/landing/CoreLoop'
@@ -13,6 +14,24 @@ import { FinalCTA } from '@/components/landing/FinalCTA'
 import { LivingUniverse } from '@/components/universe/LivingUniverse'
 import { useUniverseState } from '@/components/universe/useUniverseState'
 
+/* The scroll-driven `useUniverseState` re-renders <Landing/> on every
+   frame of scroll (to feed the canvas timeline). Memoizing each section
+   keeps that per-frame re-render to just <Landing/> + the canvas — the
+   DOM-heavy, framer-motion sections skip it entirely. They receive no
+   props, so memo is safe here. */
+const HeroM = memo(Hero)
+const ProblemSectionM = memo(ProblemSection)
+const CoreLoopM = memo(CoreLoop)
+const AIEngineSectionM = memo(AIEngineSection)
+const EveryAnswerSectionM = memo(EveryAnswerSection)
+const RoadmapSectionM = memo(RoadmapSection)
+const SyllabusUniverseM = memo(SyllabusUniverse)
+const ExamSelectorM = memo(ExamSelector)
+const AdaptiveExamSectionM = memo(AdaptiveExamSection)
+const MemoryEngineSectionM = memo(MemoryEngineSection)
+const AnalyticsSectionM = memo(AnalyticsSection)
+const FinalCTAM = memo(FinalCTA)
+
 export default function Landing() {
   const { progress, intensity } = useUniverseState()
   return (
@@ -25,18 +44,18 @@ export default function Landing() {
         progress={progress}
         intensity={intensity}
       />
-      <Hero />
-      <ProblemSection />
-      <CoreLoop />
-      <AIEngineSection />
-      <EveryAnswerSection />
-      <RoadmapSection />
-      <SyllabusUniverse />
-      <ExamSelector />
-      <AdaptiveExamSection />
-      <MemoryEngineSection />
-      <AnalyticsSection />
-      <FinalCTA />
+      <HeroM />
+      <ProblemSectionM />
+      <CoreLoopM />
+      <AIEngineSectionM />
+      <EveryAnswerSectionM />
+      <RoadmapSectionM />
+      <SyllabusUniverseM />
+      <ExamSelectorM />
+      <AdaptiveExamSectionM />
+      <MemoryEngineSectionM />
+      <AnalyticsSectionM />
+      <FinalCTAM />
     </div>
   )
 }
