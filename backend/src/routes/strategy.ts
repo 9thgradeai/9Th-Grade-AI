@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
+import { rateLimit } from '../middleware/rateLimit'
 import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
 
 /* ============================================================
@@ -12,6 +13,13 @@ import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
    ============================================================ */
 
 export const strategyRoutes = new Hono<AppEnv>()
+
+// AI endpoints are the most expensive: 10 req / min / user.
+strategyRoutes.use('/ai/*', rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  key: (c) => c.get('userId') as string | undefined,
+}))
 
 /** The user's primary exam: first with activity, else the first catalog exam. */
 async function primaryExam(userId: string) {

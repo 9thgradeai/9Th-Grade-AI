@@ -10,6 +10,7 @@
 
 import { prisma } from '../app'
 import { ensureRevisionItems } from './sm2'
+import { realtime } from './realtime'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -335,6 +336,9 @@ export async function diagnoseTest(testId: string, userId: string): Promise<Diag
   }
 
   await prisma.aIRecommendation.createMany({ data: recs })
+
+  // Phase 6: notify the user's open connections of fresh recommendations.
+  realtime.publishToUser(userId, 'recommendation:new', { count: recs.length })
 
   return {
     testId,

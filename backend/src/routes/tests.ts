@@ -9,6 +9,8 @@ import {
   type GradedQuestion,
 } from '../lib/score'
 import { diagnoseTest, recommendDifficulty } from '../lib/ai'
+import { realtime } from '../lib/realtime'
+import { sendEmail } from '../lib/email'
 
 /* ============================================================
    Test lifecycle — build, take, submit, grade.
@@ -261,6 +263,22 @@ testRoutes.post('/:id/submit', async (c) => {
 
   // Phase 3: persist AI recommendations from the diagnosis.
   await diagnoseTest(test.id, userId)
+
+  // Phase 6: live updates + transactional result email (fire-and-forget).
+  realtime.publishToUser(userId, 'progress:update', {
+    testId: test.id,
+    score: result.score,
+    accuracy: result.accuracy,
+  })
+  realtime.publishToUser(userId, 'ranking:updated', { percentile: result.percentile })
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
+  if (user) {
+    void sendEmail({
+      to: user.email,
+      subject: `Your ${test.name} result: ${result.score}%`,
+      text: `Hi ${user.name || 'there'},\n\nYou scored ${result.score}% (${result.correct}/${result.total}) on "${test.name}".\n\n${result.diagnosis}\nNext: ${result.nextBestAction}\n\n— The 9Th-Grade AI team`,
+    })
+  }
 
   return c.json({ result })
 })

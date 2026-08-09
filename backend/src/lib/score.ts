@@ -6,6 +6,7 @@
    ============================================================ */
 
 import { prisma } from '../app'
+import { realtime } from './realtime'
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 const round = (n: number) => Math.round(n)
@@ -203,6 +204,15 @@ export async function refreshPerformance(
     const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     if (dayMinutes.has(d) || i === 0) streak += 1
     else break
+  }
+
+  // Phase 6: fire a milestone event on a new 7-day-multiple streak.
+  const prev = await prisma.performance.findUnique({
+    where: { userId_examId: { userId, examId } },
+    select: { streakDays: true },
+  })
+  if (streak > 0 && streak % 7 === 0 && (prev?.streakDays ?? 0) < streak) {
+    realtime.publishToUser(userId, 'streak:milestone', { streakDays: streak })
   }
 
   await prisma.performance.upsert({

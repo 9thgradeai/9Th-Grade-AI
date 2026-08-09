@@ -3,12 +3,17 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../app'
 import { signToken, verifyToken } from '../middleware/auth'
+import { rateLimit, clientIp } from '../middleware/rateLimit'
+import { sendEmail } from '../lib/email'
 
 /* ============================================================
    Auth routes — register, login, logout, session.
    ============================================================ */
 
 export const authRoutes = new Hono()
+
+// Brute-force guard: 5 auth requests / min / IP.
+authRoutes.use('*', rateLimit({ windowMs: 60_000, max: 5, key: (c) => clientIp(c) }))
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -49,6 +54,13 @@ authRoutes.post('/register', async (c) => {
       firstName,
       password: hashedPassword,
     },
+  })
+
+  // Transactional welcome email (fire-and-forget; mock in dev).
+  void sendEmail({
+    to: email,
+    subject: 'Welcome to 9Th-Grade AI',
+    text: `Hi ${firstName || name || 'there'},\n\nYour account is ready. Log in and run a diagnostic to unlock your personalized plan.\n\n— The 9Th-Grade AI team`,
   })
 
   // Sign token

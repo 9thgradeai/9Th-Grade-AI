@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
 import { planDailyTasks } from '../lib/ai'
+import { realtime } from '../lib/realtime'
 
 /* ============================================================
    Dashboard routes — quick stats + a rule-based daily task plan.
@@ -94,5 +95,11 @@ dashboardRoutes.patch('/daily-tasks/:id', async (c) => {
     where: { id },
     data: { status: parsed.data.status },
   })
+
+  // Phase 6: live update when a daily task is completed.
+  if (parsed.data.status === 'done') {
+    realtime.publishToUser(userId, 'task:completed', { taskId: id, topic: task.topic })
+  }
+
   return c.json(updated)
 })
