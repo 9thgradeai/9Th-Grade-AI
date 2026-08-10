@@ -58,8 +58,22 @@ interface RequestOptions {
   timeoutMs?: number
 }
 
+/**
+ * Whether a real backend is reachable. In dev the local API (localhost:3001)
+ * is the intended target, so we always try it. In production we only attempt
+ * network calls when a backend URL is configured — otherwise every request
+ * would fire a CORS/net failure to a host that isn't there, spamming the
+ * console on a live site. Requests short-circuit to the mock fallback instead.
+ */
+const hasBackend = Boolean(import.meta.env.VITE_API_URL) || import.meta.env.DEV
+
 async function request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
   const rid = requestId()
+
+  if (!hasBackend) {
+    throw new ApiError(0, 'No backend configured — using local data', rid)
+  }
+
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
 

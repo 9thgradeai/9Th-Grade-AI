@@ -627,10 +627,19 @@ export function StellarField({ variant, intensity, phaseRef, className }: Stella
       PERF.targetMs = 1000 / refreshHz
     }
 
-    if (animated) {
-      start()
+    /* Defer the animation until the browser is idle so the hero text (LCP)
+       paints before the rAF loop starts consuming main-thread time on low-end
+       mobile. The CSS gradient atmosphere renders behind the canvas regardless,
+       so this is visually imperceptible. Static/ambient do a single deferred
+       frame. Falls back to setTimeout where requestIdleCallback is absent. */
+    const kickOff = () => {
+      if (animated) start()
+      else draw(0)
+    }
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(kickOff, { timeout: 150 })
     } else {
-      draw(0)
+      setTimeout(kickOff, 0)
     }
 
     return () => {
