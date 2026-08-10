@@ -19,13 +19,18 @@ export function PerfHud() {
 
   useEffect(() => {
     if (!HUD_ENABLED || !ref.current) return
+    // Throttle the text write to ~5/s so the HUD itself never steals a frame.
     let raf = 0
-    const loop = () => {
-      const el = ref.current
-      if (el) {
-        el.textContent =
-          `${PERF.fps.toFixed(0)} fps · ${PERF.frameMs.toFixed(1)}ms · ` +
-          `${PERF.particles} pts · tier ${PERF.tier} · dpr ${PERF.dpr} · ${PERF.phase}`
+    let lastWrite = 0
+    const loop = (now: number) => {
+      if (now - lastWrite > 200) {
+        lastWrite = now
+        const el = ref.current
+        if (el) {
+          el.textContent =
+            `${PERF.hz}Hz panel · ${PERF.fps.toFixed(0)} fps · ${PERF.frameMs.toFixed(1)}ms / ${PERF.targetMs.toFixed(1)}ms target · ` +
+            `${PERF.particles} pts · tier ${PERF.tier} · dpr ${PERF.dpr} · ${PERF.phase}`
+        }
       }
       raf = requestAnimationFrame(loop)
     }

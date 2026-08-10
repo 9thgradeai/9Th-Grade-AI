@@ -104,7 +104,9 @@ export const PERF: {
   tier: QualityTier
   dpr: number
   phase: CosmicHorizonPhase
-} = { fps: 0, frameMs: 0, particles: 0, tier: 'medium', dpr: 1, phase: 'hero' }
+  hz: number
+  targetMs: number
+} = { fps: 0, frameMs: 0, particles: 0, tier: 'medium', dpr: 1, phase: 'hero', hz: 60, targetMs: 16.7 }
 const STAR_COLORS = ['#e8ecf6', '#7d9dff', '#cfe9ff', '#8b5cf6', '#4fd1ff']
 
 /* Pointer parallax — star shift in px at full depth. */
@@ -343,6 +345,14 @@ export function StellarField({ variant, intensity, phaseRef, className }: Stella
     let frameEma = 16.7
     let slowFrames = 0
     let lastNow = performance.now()
+    /* Display refresh-rate detection (brief: "max fps"). rAF is capped at the
+       panel's refresh rate — 60Hz screens can never present 120fps, but 120Hz
+       panels can. We estimate the refresh rate from the fastest observed rAF
+       cadence after a warm-up, then tune the "slow" threshold to that panel so
+       the scene stays light enough to hold the full native rate without drops. */
+    let refreshHz = 60
+    let warmFrames = 0
+    let minDt = 1e9
 
     /* --- Meteor scheduling (deterministic rng for pacing, time for firing). --- */
     const rngM = makeRng(METEOR_SEED)
@@ -394,8 +404,23 @@ export function StellarField({ variant, intensity, phaseRef, className }: Stella
         // Real wall-clock frame time → governor.
         const realDt = Math.min(100, now - lastNow)
         lastNow = now
+
+        // Detect the panel refresh rate from the fastest cadence after warm-up.
+        warmFrames++
+        if (realDt > 0 && realDt < minDt) minDt = realDt
+        if (warmFrames === 90) {
+          const detected = Math.round(1000 / minDt)
+          if (detected >= 100) refreshHz = 120
+          else if (detected >= 70) refreshHz = 90
+          else refreshHz = 60
+          minDt = 1e9
+        }
+
         frameEma = frameEma * 0.9 + realDt * 0.1
-        if (frameEma > 26) {
+        // "Slow" is relative to the panel: 60Hz→26ms, 120Hz→~13ms. Stepping the
+        // scene quality down only when we're actually missing the native rate.
+        const slowThreshold = (1000 / refreshHz) * 1.6
+        if (frameEma > slowThreshold) {
           slowFrames++
           if (slowFrames > 45 && qualityScale > 0.6) {
             qualityScale = Math.max(0.6, qualityScale - 0.1)
@@ -475,16 +500,24 @@ export function StellarField({ variant, intensity, phaseRef, className }: Stella
           ctx.fillStyle = grad
           ctx.fillRect(cx - core, cy - core, core * 2, core * 2)
 
-          /* Points — rotate the cloud, squash elliptical axes. */
-          ctx.fillStyle = `rgb(${r},${gr},${b})`
-          for (const p of g.pts) {
+          /* Points — rotate the cloud, squash elliptical axes. Batched into one
+             Path2D + a single fill per galaxy: ~650 tiny beginPath/arc/fill calls
+             per frame became the bottleneck at high refresh rates. Tiny squares at
+             1–2px read identically to arcs. qualityScale lets the frame-time
+             governor also shed galaxy points when the panel can't keep up. */
+          const path = new Path2D()
+          const drawCount = Math.round(g.pts.length * qualityScale)
+          for (let k = 0; k < drawCount; k++) {
+            const p = g.pts[k]
             const px = cx + (p.x * ca - p.y * sa) * sc
             const py = cy + (p.x * sa + p.y * ca) * sc * g.squash
-            ctx.globalAlpha = Math.min(1, p.al * gAlpha * 0.9)
-            ctx.beginPath()
-            ctx.arc(px, py, p.s, 0, Math.PI * 2)
-            ctx.fill()
+            const s = p.s
+            path.moveTo(px - s, py - s)
+            path.rect(px - s, py - s, s * 2, s * 2)
           }
+          ctx.globalAlpha = gAlpha
+          ctx.fillStyle = `rgb(${r},${gr},${b})`
+          ctx.fill(path)
           ctx.globalAlpha = 1
         }
       }
@@ -590,6 +623,8 @@ export function StellarField({ variant, intensity, phaseRef, className }: Stella
       PERF.tier = quality.tier
       PERF.dpr = dpr
       PERF.phase = phaseRef.current
+      PERF.hz = refreshHz
+      PERF.targetMs = 1000 / refreshHz
     }
 
     if (animated) {
