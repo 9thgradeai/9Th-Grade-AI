@@ -5,6 +5,7 @@ import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
+import { ApiError } from '@/lib/client'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
@@ -25,8 +26,13 @@ export default function Login() {
       await login(email, password)
       navigate('/dashboard', { replace: true })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Login failed'
-      setError(msg)
+      if (err instanceof ApiError) {
+        if (err.status === 0) setError('Backend is not available. Please try again later.')
+        else if (err.code === 'INVALID_CREDENTIALS') setError('Invalid email or password.')
+        else setError(err.message)
+      } else {
+        setError('Login failed. Please try again.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -96,7 +102,13 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted">
+          <p className="mt-3 text-center text-sm text-muted">
+            <Link to="/forgot-password" className="font-medium text-accent-hi transition-colors hover:text-accent">
+              Forgot your password?
+            </Link>
+          </p>
+
+          <p className="mt-4 text-center text-sm text-muted">
             Don't have an account?{' '}
             <Link to="/register" className="font-medium text-accent-hi transition-colors hover:text-accent">
               Create one

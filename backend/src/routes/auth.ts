@@ -35,7 +35,7 @@ authRoutes.post('/register', async (c) => {
   const body = await c.req.json()
   const parsed = registerSchema.safeParse(body)
   if (!parsed.success) {
-    return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
+    return c.json({ error: 'Invalid input', code: 'INVALID_INPUT', details: parsed.error.flatten() }, 400)
   }
 
   const { email, password, name, firstName } = parsed.data
@@ -43,7 +43,7 @@ authRoutes.post('/register', async (c) => {
   // Check if user exists
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    return c.json({ error: 'Email already registered' }, 409)
+    return c.json({ error: 'Email already registered', code: 'EMAIL_IN_USE' }, 409)
   }
 
   // Hash password
@@ -98,13 +98,13 @@ authRoutes.post('/login', async (c) => {
   // Find user
   const user = await prisma.user.findUnique({ where: { email } })
   if (!user || !user.password) {
-    return c.json({ error: 'Invalid email or password' }, 401)
+    return c.json({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' }, 401)
   }
 
   // Verify password
   const valid = await bcrypt.compare(password, user.password)
   if (!valid) {
-    return c.json({ error: 'Invalid email or password' }, 401)
+    return c.json({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' }, 401)
   }
 
   // Sign token

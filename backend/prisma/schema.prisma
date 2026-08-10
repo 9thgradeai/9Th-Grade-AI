@@ -20,6 +20,7 @@ model User {
   firstName         String
   timezone          String   @default("Asia/Dhaka")
   avatar            String?
+  onboardingData    Json?    // Exam preferences, study time, etc.
   role              String   @default("user") // user | admin
   emailVerified     Boolean  @default(false)
   verificationToken String?

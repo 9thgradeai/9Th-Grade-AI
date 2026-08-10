@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { AppShell } from '@/components/layout/AppShell'
+import ProtectedRoute from '@/components/ProtectedRoute'
 
 const Landing = lazy(() => import('@/pages/Landing'))
 const HowItWorks = lazy(() => import('@/pages/HowItWorks'))
@@ -15,6 +16,9 @@ const About = lazy(() => import('@/pages/About'))
 const Login = lazy(() => import('@/pages/Login'))
 const Register = lazy(() => import('@/pages/Register'))
 const Onboarding = lazy(() => import('@/pages/Onboarding'))
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Subject = lazy(() => import('@/pages/Subject'))
 const Topic = lazy(() => import('@/pages/Topic'))
@@ -83,23 +87,28 @@ export default function App() {
         {/* Auth — immersive, no chrome */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
-        {/* Authenticated application */}
+        {/* Authenticated application — all routes gated by ProtectedRoute */}
         <Route path="/" element={<AppShell />}>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="subjects/:id" element={<Subject />} />
-          <Route path="topics/:id" element={<Topic />} />
-          <Route path="practice" element={<Practice />} />
-          <Route path="mock-tests" element={<MockTests />} />
-          <Route path="mock-tests/:id" element={<MockTest />} />
-          <Route path="results/:id" element={<Results />} />
-          <Route path="strategy" element={<Strategy />} />
-          <Route path="memory" element={<Memory />} />
-          <Route path="progress" element={<Progress />} />
-          <Route path="rank" element={<Rank />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="settings" element={<Settings />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="subjects/:id" element={<Subject />} />
+            <Route path="topics/:id" element={<Topic />} />
+            <Route path="practice" element={<Practice />} />
+            <Route path="mock-tests" element={<MockTests />} />
+            <Route path="mock-tests/:id" element={<MockTest />} />
+            <Route path="results/:id" element={<Results />} />
+            <Route path="strategy" element={<Strategy />} />
+            <Route path="memory" element={<Memory />} />
+            <Route path="progress" element={<Progress />} />
+            <Route path="rank" element={<Rank />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />

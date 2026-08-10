@@ -24,12 +24,14 @@ const RETRY_BASE_MS = 300
 /** Structured error thrown by the client. `status === 0` means network failure. */
 export class ApiError extends Error {
   readonly status: number
+  readonly code?: string
   readonly requestId?: string
-  constructor(status: number, message: string, requestId?: string) {
+  constructor(status: number, message: string, requestId?: string, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.requestId = requestId
+    this.code = code
   }
 }
 
@@ -96,13 +98,23 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
       let message = `Request failed (${res.status})`
       let serverRid: string | undefined
       try {
-        const body = (await res.json()) as { error?: string; requestId?: string }
+        const body = (await res.json()) as { error?: string; requestId?: string; code?: string }
         if (body.error) message = body.error
         serverRid = body.requestId
       } catch {
         /* non-JSON error body */
       }
-      throw new ApiError(res.status, message, serverRid ?? rid)
+      let code: string | undefined
+      try {
+        const codeBody = await res.clone().json() as { code?: string }
+        code = codeBody.code
+      } catch { /* no code in response */ }
+      const err = new ApiError(res.status, message, serverRid ?? rid, code)
+      /* Brief §13: on 401, clear auth and redirect — never silently mock. */
+      if (res.status === 401) {
+        window.dispatchEvent(new Event('auth:logout'))
+      }
+      throw err
     }
 
     if (res.status === 204) return undefined as T

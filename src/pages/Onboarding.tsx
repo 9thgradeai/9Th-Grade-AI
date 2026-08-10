@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Shield, Landmark, Briefcase, GraduationCap, Sparkles, Check } from 'lucide-react'
@@ -37,9 +37,18 @@ const AI_STEPS = ['Analyzing your preparation…', 'Scanning performance', 'Mapp
 export default function Onboarding() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
+  const [onboarded, setOnboarded] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    api.getOnboardingState()
+      .then((res) => setOnboarded(res.onboardingCompleted))
+      .catch(() => setOnboarded(false))
+  }, [user])
 
   if (!loading && !user) return <Navigate to="/login" replace />
-  if (loading) return null
+  if (loading || onboarded === null) return null
+  if (onboarded) return <Navigate to="/dashboard" replace />
   const [step, setStep] = useState(0)
   const [exam, setExam] = useState<string | null>(null)
   const [date, setDate] = useState('')
@@ -86,6 +95,19 @@ export default function Onboarding() {
   const diagnosticScore = Math.round((correct / diagnostic.length) * 100)
   const baseMastery = levelOptions.find((l) => l.id === level)?.value ?? 41
   const adjustedMastery = Math.min(85, baseMastery + Math.round(diagnosticScore / 8))
+
+  /* Save preferences to backend when onboarding completes. */
+  useEffect(() => {
+    if (!done || !exam || !date || !time || !level) return
+    api.savePreferences({
+      examId: exam,
+      examDate: date,
+      dailyTime: time,
+      level,
+      diagnosticScore,
+      priorities: ['English Grammar', 'Mathematics', 'International Affairs'],
+    }).catch(() => { /* best-effort; the onboarding still completes even if this fails */ })
+  }, [done, exam, date, time, level, diagnosticScore])
 
   return (
     <div className="relative flex min-h-screen flex-col">

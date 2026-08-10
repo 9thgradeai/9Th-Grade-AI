@@ -22,6 +22,7 @@ userRoutes.get('/me', async (c) => {
       timezone: true,
       avatar: true,
       createdAt: true,
+      onboardingData: true,
     },
   })
 
@@ -30,6 +31,42 @@ userRoutes.get('/me', async (c) => {
   }
 
   return c.json(user)
+})
+
+// Save onboarding preferences (idempotent)
+const preferencesSchema = z.object({
+  examId: z.string().min(1),
+  examDate: z.string(),
+  dailyTime: z.string(),
+  level: z.enum(['beginner', 'intermediate', 'advanced']),
+  diagnosticScore: z.number().min(0).max(100),
+  priorities: z.array(z.string()).optional(),
+})
+
+userRoutes.post('/me/preferences', async (c) => {
+  const userId = c.get('userId') as string
+  const body = await c.req.json()
+  const parsed = preferencesSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { onboardingData: parsed.data },
+  })
+
+  return c.json({ ok: true, onboardingCompleted: true })
+})
+
+// Get current user's onboarding state
+userRoutes.get('/me/onboarding', async (c) => {
+  const userId = c.get('userId') as string
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { onboardingData: true },
+  })
+  return c.json({ onboardingCompleted: !!user?.onboardingData, data: user?.onboardingData ?? null })
 })
 
 // Update profile

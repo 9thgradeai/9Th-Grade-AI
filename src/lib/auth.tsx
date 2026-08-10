@@ -5,12 +5,20 @@ import { client, getToken, setToken } from '@/lib/client'
 import { clearApiCache } from '@/lib/api'
 
 /* ============================================================
-   Auth store — session bootstrap, login, register, logout.
-   Uses the Bearer token from localStorage. Additive and
-   non-gating: when there's no token (or the API is unreachable)
-   the app keeps working anonymously — data routes fall back to
-   mock. A real login gate is a follow-up feature.
+   Auth store — production-grade state machine.
+
+   States:
+     INITIALIZING   — session bootstrap in progress (show spinner, no redirect)
+     AUTHENTICATED  — real user loaded, app is usable
+     UNAUTHENTICATED — no session, redirect to /login
+
+   Critical rules (brief §13):
+   - Auth methods (login/register/logout) NEVER fall back to mock data.
+   - When JWT expires → 401 → state becomes UNAUTHENTICATED → /login.
+   - No silent mock-user injection.
    ============================================================ */
+
+export type AuthState = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED'
 
 interface RegisterPayload {
   name: string
@@ -35,14 +43,21 @@ interface SessionResponse {
 }
 
 interface AuthContextValue {
+  state: AuthState
+  /** Null when UNAUTHENTICATED; real User when AUTHENTICATED. */
   user: User | null
+  /** True only during INITIALIZING. Kept for backward compatibility with components. */
   loading: boolean
   login: (email: string, password: string) => Promise<User>
   register: (payload: RegisterPayload) => Promise<User>
   logout: () => Promise<void>
+  /** Force-transition to UNAUTHENTICATED (called by client.ts on 401). */
+  handleUnauthorized: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+/* ---- Helpers ---- */
 
 function toUser(raw: UserPayload): User {
   return {
@@ -55,48 +70,68 @@ function toUser(raw: UserPayload): User {
   }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+/* ---- Provider ---- */
 
-  const applySession = useCallback(async () => {
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>('INITIALIZING')
+  const [user, setUser] = useState<User | null>(null)
+
+  const setAuthenticated = useCallback((u: UserPayload) => {
+    setUser(toUser(u))
+    setState('AUTHENTICATED')
+  }, [])
+
+  const setUnauthenticated = useCallback(() => {
+    setToken(null)
+    setUser(null)
+    clearApiCache()
+    setState('UNAUTHENTICATED')
+  }, [])
+
+  /* --- Bootstrap: check existing session on mount --- */
+  const bootstrap = useCallback(async () => {
     const token = getToken()
     if (!token) {
-      setUser(null)
-      setLoading(false)
+      setUnauthenticated()
       return
     }
     try {
       const me = await client.get<UserPayload>('/users/me')
-      setUser(toUser(me))
+      setAuthenticated(me)
     } catch {
-      setToken(null)
-      setUser(null)
-    } finally {
-      setLoading(false)
+      // 401 / expired / network error → unauthenticated
+      setUnauthenticated()
     }
-  }, [])
+  }, [setAuthenticated, setUnauthenticated])
 
   useEffect(() => {
-    void applySession()
-  }, [applySession])
+    void bootstrap()
+  }, [bootstrap])
 
+  /* --- Listen for 401 events dispatched by client.ts --- */
+  useEffect(() => {
+    const onUnauthorized = () => setUnauthenticated()
+    window.addEventListener('auth:logout', onUnauthorized)
+    return () => window.removeEventListener('auth:logout', onUnauthorized)
+  }, [setUnauthenticated])
+
+  /* --- Auth methods: NEVER fall back to mock (brief §2/§13) --- */
   const login = useCallback(async (email: string, password: string) => {
     const { user: u, token } = await client.post<SessionResponse>('/auth/login', {
       email,
       password,
     })
     setToken(token)
-    setUser(toUser(u))
+    setAuthenticated(u)
     return toUser(u)
-  }, [])
+  }, [setAuthenticated])
 
   const register = useCallback(async (payload: RegisterPayload) => {
     const { user: u, token } = await client.post<SessionResponse>('/auth/register', payload)
     setToken(token)
-    setUser(toUser(u))
+    setAuthenticated(u)
     return toUser(u)
-  }, [])
+  }, [setAuthenticated])
 
   const logout = useCallback(async () => {
     try {
@@ -104,14 +139,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* local logout regardless of network state */
     }
-    setToken(null)
-    setUser(null)
-    clearApiCache()
-  }, [])
+    setUnauthenticated()
+  }, [setUnauthenticated])
+
+  const handleUnauthorized = useCallback(() => {
+    setUnauthenticated()
+  }, [setUnauthenticated])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({
+      state,
+      user,
+      loading: state === 'INITIALIZING',
+      login,
+      register,
+      logout,
+      handleUnauthorized,
+    }),
+    [state, user, login, register, logout, handleUnauthorized],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

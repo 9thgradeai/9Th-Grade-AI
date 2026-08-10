@@ -5,6 +5,7 @@ import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
+import { ApiError } from '@/lib/client'
 
 export default function Register() {
   const { user, loading, register } = useAuth()
@@ -31,8 +32,13 @@ export default function Register() {
       await register({ name, firstName, email, password })
       navigate('/onboarding', { replace: true })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Registration failed'
-      setError(msg)
+      if (err instanceof ApiError) {
+        if (err.status === 0) setError('Backend is not available. Please try again later.')
+        else if (err.code === 'EMAIL_IN_USE') setError('An account with this email already exists.')
+        else setError(err.message)
+      } else {
+        setError('Registration failed. Please try again.')
+      }
     } finally {
       setSubmitting(false)
     }

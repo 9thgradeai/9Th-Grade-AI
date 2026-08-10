@@ -495,6 +495,16 @@ export const api = {
      client-side and relies on `correctIndex`, which the backend deliberately
      strips on delivery (§31). Server-side grading is a follow-up that reworks
      Practice/MockTest/Results together. */
+  /** Save onboarding preferences to the real backend (never mocked). */
+  savePreferences(prefs: { examId: string; examDate: string; dailyTime: string; level: string; diagnosticScore: number; priorities?: string[] }): Promise<{ ok: boolean; onboardingCompleted: boolean }> {
+    return client.post('/users/me/preferences', prefs)
+  },
+
+  /** Check whether onboarding has been completed. */
+  getOnboardingState(): Promise<{ onboardingCompleted: boolean; data: unknown }> {
+    return client.get('/users/me/onboarding')
+  },
+
   getSampleResult: () => withLoading(data.sampleResult),
 
   buildTest(examId: string, name: string, kind: Test['kind'], topicId?: string, count = 5): Promise<Test> {

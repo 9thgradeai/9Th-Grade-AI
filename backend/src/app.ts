@@ -20,6 +20,7 @@ import { paymentsRoutes, webhookRoute } from './routes/payments'
 import { realtimeRoutes } from './routes/realtime'
 import { adminRoutes } from './routes/admin'
 import { authMiddleware } from './middleware/auth'
+import { roleGuard } from './middleware/rbac'
 import type { AppEnv } from './types/env'
 
 /* ============================================================
@@ -38,6 +39,10 @@ app.use('*', securityHeaders)
 app.use('*', cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
+  // Brief §17: in production, never use *
+  ...(process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL
+    ? { origin: process.env.FRONTEND_URL }
+    : {}),
 }))
 
 // Health / readiness check (Phase 6 monitoring)
@@ -81,6 +86,7 @@ protectedApp.route('/', strategyRoutes)
 protectedApp.route('/revision', revisionRoutes)
 protectedApp.route('/payments', paymentsRoutes)
 protectedApp.route('/realtime', realtimeRoutes)
+protectedApp.use('/admin', roleGuard('admin'))
 protectedApp.route('/admin', adminRoutes)
 
 // Public webhook — mounted outside auth (before /api) so Stripe can reach it.
@@ -93,10 +99,11 @@ app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404)
 })
 
-// Error handler
+// Error handler — brief §43: never expose stack traces or internal details.
 app.onError((err, c) => {
-  console.error('API Error:', err)
-  return c.json({ error: 'Internal server error' }, 500)
+  const rid = c.req.header('x-request-id') ?? crypto.randomUUID()
+  console.error(JSON.stringify({ level: 'error', request_id: rid, route: c.req.path, message: err.message }))
+  return c.json({ error: 'Internal server error', requestId: rid }, 500)
 })
 
 export { app }
