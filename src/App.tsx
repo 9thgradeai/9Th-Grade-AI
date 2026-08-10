@@ -12,6 +12,8 @@ const AIEngine = lazy(() => import('@/pages/AIEngine'))
 const Pricing = lazy(() => import('@/pages/Pricing'))
 const About = lazy(() => import('@/pages/About'))
 
+const Login = lazy(() => import('@/pages/Login'))
+const Register = lazy(() => import('@/pages/Register'))
 const Onboarding = lazy(() => import('@/pages/Onboarding'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Subject = lazy(() => import('@/pages/Subject'))
@@ -78,7 +80,9 @@ export default function App() {
           <Route path="/about" element={<About />} />
         </Route>
 
-        {/* Onboarding — immersive, no chrome */}
+        {/* Auth — immersive, no chrome */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* Authenticated application */}

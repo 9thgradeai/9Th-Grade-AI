@@ -73,10 +73,10 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <LinkButton to="/onboarding" variant="ghost" size="sm">
+            <LinkButton to="/login" variant="ghost" size="sm">
               Sign In
             </LinkButton>
-            <LinkButton to="/onboarding" size="sm" iconRight={<ArrowRight size={14} />}>
+            <LinkButton to="/register" size="sm" iconRight={<ArrowRight size={14} />}>
               Start Preparing
             </LinkButton>
           </div>
@@ -114,10 +114,10 @@ export function Navbar() {
               ))}
             </nav>
             <div className="mt-2 flex flex-col gap-2 border-t border-white/8 pt-3">
-              <LinkButton to="/onboarding" variant="ghost" size="md">
+              <LinkButton to="/login" variant="ghost" size="md">
                 Sign In
               </LinkButton>
-              <LinkButton to="/onboarding" size="md" iconRight={<ArrowRight size={15} />}>
+              <LinkButton to="/register" size="md" iconRight={<ArrowRight size={15} />}>
                 Start Preparing
               </LinkButton>
             </div>

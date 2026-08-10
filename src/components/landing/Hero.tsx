@@ -74,7 +74,7 @@ export function Hero() {
           className="g-enter mt-9 flex flex-col gap-3 sm:flex-row"
           style={{ '--enter-delay': '0.85s' } as React.CSSProperties}
         >
-          <LinkButton to="/onboarding" size="lg" iconRight={<ArrowRight size={16} />}>
+          <LinkButton to="/register" size="lg" iconRight={<ArrowRight size={16} />}>
             Build My Preparation System
           </LinkButton>
           <LinkButton to="/exams" size="lg" variant="outline" icon={<PlayCircle size={16} />}>

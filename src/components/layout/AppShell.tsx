@@ -4,8 +4,7 @@ import { LayoutDashboard, Target, Brain, Dumbbell, LineChart, Trophy, LogOut } f
 import { Logo } from '@/components/navigation/Logo'
 import { CosmicHorizon } from '@/components/horizon'
 import { cn } from '@/lib/cn'
-import { useAsync } from '@/lib/useAsync'
-import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 const nav = [
   { to: '/dashboard', label: 'Command', icon: LayoutDashboard },
@@ -17,7 +16,7 @@ const nav = [
 ]
 
 export function AppShell() {
-  const user = useAsync(() => api.getUser())
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   return (
@@ -50,17 +49,18 @@ export function AppShell() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/profile')}
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] py-1.5 pl-1.5 pr-3 transition-colors hover:bg-white/[0.08]"
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet text-[11px] font-bold text-white">
-                {user.data?.firstName?.[0] ?? 'R'}
+                {user?.firstName?.[0] ?? 'U'}
               </span>
               <span className="hidden text-[13px] font-medium text-ink-soft sm:block">
-                {user.data?.firstName ?? 'Rafi'}
+                {user?.firstName ?? user?.name ?? 'Account'}
               </span>
             </button>
             <button
+              onClick={() => { logout(); navigate('/login', { replace: true }) }}
               aria-label="Sign out"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/5 hover:text-danger"
             >

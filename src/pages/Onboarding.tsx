@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Shield, Landmark, Briefcase, GraduationCap, Sparkles, Check } from 'lucide-react'
 import { CosmicHorizon } from '@/components/horizon'
@@ -8,6 +8,7 @@ import { Button, Progress, Signal } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 const examOptions = [
   { id: 'exam_bcs', name: 'BCS', tag: 'Bangladesh Civil Service', icon: Shield },
@@ -34,7 +35,11 @@ const diagnostic = [
 const AI_STEPS = ['Analyzing your preparation…', 'Scanning performance', 'Mapping weaknesses', 'Calculating priorities', 'Building roadmap']
 
 export default function Onboarding() {
+  const { user, loading } = useAuth()
   const navigate = useNavigate()
+
+  if (!loading && !user) return <Navigate to="/login" replace />
+  if (loading) return null
   const [step, setStep] = useState(0)
   const [exam, setExam] = useState<string | null>(null)
   const [date, setDate] = useState('')
