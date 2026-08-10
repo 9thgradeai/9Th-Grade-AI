@@ -8,6 +8,10 @@
     <meta name="theme-color" content="#05060a" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Preload the critical Geist Latin font (hero text) from same origin to
+         eliminate the third-party round-trip variance on mobile real-network loads.
+         The async Google Fonts link below still serves the full set as fallback. -->
+    <link rel="preload" as="font" type="font/woff2" href="/Geist-Latin.woff2" crossorigin />
     <!-- Fonts load asynchronously (not render-blocking) with font-display:swap
          so first paint isn't blocked on the stylesheet; text renders in fallback
          then swaps in. Trimmed to the weights the design actually uses. -->
