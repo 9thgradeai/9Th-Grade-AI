@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { SectionHeading, Reveal } from './Reveal'
 
@@ -65,16 +64,10 @@ export function EveryAnswerSection() {
                 The system reads your correctness, your speed, the difficulty, your confidence, and your
                 recurring error patterns — then updates your entire preparation model.
               </p>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-                className="mt-6 rounded-2xl border border-accent/20 bg-accent/[0.06] p-5"
-              >
+              <Reveal delay={0.3} y={10} className="mt-6 rounded-2xl border border-accent/20 bg-accent/[0.06] p-5">
                 <p className="font-mono text-sm font-semibold tracking-wide text-accent-hi">Every question becomes a signal.</p>
                 <p className="mt-2 text-sm text-muted">One wrong answer — correctly read — tells your system more than a blind 10-question quiz ever could.</p>
-              </motion.div>
+              </Reveal>
             </div>
           </Reveal>
         </div>

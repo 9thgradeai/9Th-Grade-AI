@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { SectionHeading, Reveal } from './Reveal'
 import { BrandMark } from '@/components/navigation/Logo'
 
@@ -7,13 +6,10 @@ const outputs = ['daily plan', 'next best action', 'revision schedule', 'targete
 
 function Chip({ label }: { label: string }) {
   return (
-    <motion.span
-      whileHover={{ scale: 1.05 }}
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] text-ink-soft"
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] text-ink-soft transition-transform duration-200 hover:scale-[1.05]">
       <span className="h-1 w-1 rounded-full bg-cyan" />
       {label}
-    </motion.span>
+    </span>
   )
 }
 
@@ -40,9 +36,9 @@ export function AIEngineSection() {
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-faint">The system reads</p>
               <div className="flex flex-wrap gap-2">
                 {inputs.map((i, idx) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.05 }}>
+                  <Reveal key={i} delay={idx * 0.05} y={0}>
                     <Chip label={i} />
-                  </motion.div>
+                  </Reveal>
                 ))}
               </div>
             </div>
@@ -52,17 +48,13 @@ export function AIEngineSection() {
           <Reveal>
             <div className="relative mx-auto flex h-44 w-44 items-center justify-center">
               {/* rotating ring */}
-              <motion.div
+              <div
                 className="absolute inset-0 rounded-full border border-accent/20"
-                style={{ borderTopColor: 'rgba(79,209,255,0.6)' }}
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 14, ease: 'linear' }}
+                style={{ borderTopColor: 'rgba(79,209,255,0.6)', animation: 'g-rotate 14s linear infinite' }}
               />
-              <motion.div
+              <div
                 className="absolute inset-4 rounded-full border border-violet/20"
-                style={{ borderBottomColor: 'rgba(139,92,246,0.6)' }}
-                animate={{ rotate: -360 }}
-                transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+                style={{ borderBottomColor: 'rgba(139,92,246,0.6)', animation: 'g-rotate-reverse 20s linear infinite' }}
               />
               <div className="flex h-24 w-24 items-center justify-center rounded-2xl ring-glow bg-gradient-to-br from-accent/25 to-violet/25 backdrop-blur">
                 <BrandMark className="h-10 w-10" />
@@ -79,15 +71,12 @@ export function AIEngineSection() {
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-faint lg:flex lg:justify-end">The system plans</p>
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 {outputs.map((o, idx) => (
-                  <motion.div key={o} initial={{ opacity: 0, x: 12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.05 }}>
-                    <motion.span
-                      whileHover={{ scale: 1.05 }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] text-ink-soft"
-                    >
+                  <Reveal key={o} delay={idx * 0.05} y={0}>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] text-ink-soft transition-transform duration-200 hover:scale-[1.05]">
                       <span className="h-1 w-1 rounded-full bg-accent" />
                       {o}
-                    </motion.span>
-                  </motion.div>
+                    </span>
+                  </Reveal>
                 ))}
               </div>
             </div>

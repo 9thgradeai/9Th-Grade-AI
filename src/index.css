@@ -452,6 +452,139 @@ body {
   animation: hx-grain 0.9s steps(10) infinite;
 }
 
+/* ---------- Landing reveal / entrance (CSS — replaces framer-motion) ---------- */
+
+/* Scroll reveal: start hidden, transition to visible when .g-reveal-in is added
+   by an IntersectionObserver. Mirrors the previous framer-motion Reveal
+   (0.7s, ease [0.22,1,0.36,1], once). Delay is set via --reveal-delay. */
+.g-reveal {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 24px));
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+.g-reveal.g-reveal-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Entrance on mount (used by the hero). Runs immediately at first paint so the
+   LCP element does not wait on a long JS-driven delay. */
+@keyframes g-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-y, 20px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.g-enter {
+  animation: g-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--enter-delay, 0s);
+}
+
+@keyframes g-scale-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.g-scale-pop {
+  animation: g-scale-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--enter-delay, 0s);
+}
+
+/* Brand reveal sequence (point of light → ring → identity). Elements are
+   stacked; each animates in then out via keyframes, ending with the identity
+   held. Replaces the framer-motion/AnimatePresence phase machine with the
+   same timing/scale mechanics, compressed so the hero text paints early. */
+@keyframes g-brand-point {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+.g-brand-point {
+  animation: g-brand-point 0.6s ease-out both;
+}
+
+@keyframes g-brand-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+.g-brand-ring {
+  animation: g-brand-ring 0.9s ease-out both;
+  animation-delay: 0.35s;
+}
+.g-brand-identity {
+  animation: g-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--enter-delay, 0.9s);
+}
+
+/* Scroll-down hint pulse + bob. */
+@keyframes g-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes g-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+.g-scroll-hint-rect {
+  animation: g-pulse 2.4s ease-in-out infinite;
+}
+.g-scroll-hint-dot {
+  animation: g-bob 2.4s ease-in-out infinite;
+}
+
 /* ---------- Reduced motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -463,6 +596,37 @@ body {
   *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Landing section keyframes (CSS — replaces framer-motion infinite animations) */
+
+@keyframes g-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes g-rotate-reverse {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes g-star-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
   }
 }

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { SectionHeading, Reveal } from './Reveal'
 
 function Radial({ value, label, color = '#4f7cff' }: { value: number; label: string; color?: string }) {
@@ -10,13 +9,10 @@ function Radial({ value, label, color = '#4f7cff' }: { value: number; label: str
       <div className="relative h-28 w-28">
         <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
           <circle cx="56" cy="56" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
-          <motion.circle
+          <circle
             cx="56" cy="56" r={r} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
             strokeDasharray={c}
-            initial={{ strokeDashoffset: c }}
-            whileInView={{ strokeDashoffset: offset }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+            strokeDashoffset={offset}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center font-mono text-xl font-semibold text-ink">
@@ -85,11 +81,7 @@ export function AnalyticsSection() {
                   <line key={y} x1="0" x2={w} y1={y} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
                 ))}
                 <path d={`M${pts.map((p) => p.join(',')).join(' L')}`} fill="none" stroke="#4f7cff" strokeWidth="2" strokeLinecap="round" />
-                <motion.path
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.5 }}
+                <path
                   d={`M${pts[0].join(',')} L${pts[0].join(',')} L${pts[pts.length - 1].join(',')} L${pts[pts.length - 1][0]},${h - 8} Z`}
                   fill="url(#trajfill)"
                 />

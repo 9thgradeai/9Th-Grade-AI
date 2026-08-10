@@ -1,5 +1,8 @@
-import { motion } from 'framer-motion'
-import { type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+
+/* CSS-based scroll reveal (replaces framer-motion). Same visual result as the
+   previous motion.div reveal: opacity 0→1, translateY y→0, 0.7s, once, -80px
+   trigger. Uses an IntersectionObserver to toggle the `.g-reveal-in` class. */
 
 export function Reveal({
   children,
@@ -12,16 +15,37 @@ export function Reveal({
   y?: number
   className?: string
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setShown(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '-80px', threshold: 0 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}
+    <div
+      ref={ref}
+      className={`g-reveal ${shown ? 'g-reveal-in' : ''} ${className ?? ''}`}
+      style={{ '--reveal-y': `${y}px`, '--reveal-delay': `${delay}s` } as React.CSSProperties}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }
 

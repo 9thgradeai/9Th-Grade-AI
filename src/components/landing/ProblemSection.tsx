@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { Reveal } from './Reveal'
 
 const questions = [
@@ -28,17 +27,16 @@ export function ProblemSection() {
         {/* Scattered questions, then organised */}
         <div className="relative mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {questions.map((q, i) => (
-            <motion.div
+            <Reveal
               key={q}
-              initial={{ opacity: 0, y: 20, scale: 0.96 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] px-5 py-5"
+              delay={i * 0.08}
+              y={20}
             >
-              <span className="font-mono text-[11px] text-faint">0{i + 1}</span>
-              <p className="mt-2 text-[15px] leading-snug text-ink-soft">{q}</p>
-            </motion.div>
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-5 py-5">
+                <span className="font-mono text-[11px] text-faint">0{i + 1}</span>
+                <p className="mt-2 text-[15px] leading-snug text-ink-soft">{q}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
 

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { SectionHeading, Reveal } from './Reveal'
 
 const reviews = [
@@ -30,32 +29,27 @@ export function MemoryEngineSection() {
           <div className="mx-auto max-w-3xl">
             <div className="flex items-end justify-between gap-2">
               {reviews.map((r, i) => (
-                <motion.div
-                  key={r.label}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.12 }}
-                  className="flex flex-1 flex-col items-center gap-3"
-                >
-                  <motion.svg
+                <Reveal key={r.label} delay={i * 0.12} y={16} className="flex flex-1 flex-col items-center gap-3">
+                  <svg
                     width="34"
                     height="34"
                     viewBox="0 0 24 24"
-                    style={{ opacity: r.brightness }}
-                    animate={r.label === 'Mastery' ? { scale: [1, 1.15, 1] } : {}}
-                    transition={{ repeat: Infinity, duration: 2.4 }}
+                    style={
+                      r.label === 'Mastery'
+                        ? { opacity: r.brightness, animation: 'g-star-pulse 2.4s ease-in-out infinite' }
+                        : { opacity: r.brightness }
+                    }
                   >
                     <path
                       fill={r.label === 'Mastery' ? '#22d3ee' : '#8b94ab'}
                       d="M12 2l2.5 6.2L21 9l-5 4.2L17.5 20 12 16.6 6.5 20 8 13.2 3 9l6.5-.8z"
                     />
-                  </motion.svg>
+                  </svg>
                   <div className="flex flex-col items-center">
                     <span className="text-[11px] font-medium text-ink-soft">{r.label}</span>
                     <span className="text-[10px] text-faint">+ interval</span>
                   </div>
-                </motion.div>
+                </Reveal>
               ))}
             </div>
 

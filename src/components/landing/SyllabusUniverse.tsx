@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { SectionHeading, Reveal } from './Reveal'
 
@@ -42,51 +41,40 @@ export function SyllabusUniverse() {
 
             {/* central node */}
             <div className="relative mx-auto flex w-fit flex-col items-center">
-              <motion.div
-                className="flex h-20 w-20 items-center justify-center rounded-full border border-accent/30 bg-accent/[0.08] font-mono text-lg font-bold tracking-wider text-accent-hi ring-glow"
-                whileHover={{ scale: 1.05 }}
+              <div
+                className="flex h-20 w-20 items-center justify-center rounded-full border border-accent/30 bg-accent/[0.08] font-mono text-lg font-bold tracking-wider text-accent-hi ring-glow transition-transform duration-200 hover:scale-[1.05]"
               >
                 BCS
-              </motion.div>
+              </div>
               <span className="mt-2 text-[11px] uppercase tracking-[0.2em] text-faint">central node</span>
             </div>
 
             {/* subjects orbit */}
             <div className="relative mt-10 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {subjects.map((s, i) => (
-                <motion.button
-                  key={s.name}
-                  onClick={() => setActive(active?.name === s.name ? null : s)}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`rounded-xl border px-4 py-3 text-left transition-all ${
-                    active?.name === s.name
-                      ? 'border-accent/40 bg-accent/[0.08]'
-                      : 'border-white/8 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
-                  }`}
-                  aria-pressed={active?.name === s.name}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-ink">{s.name}</span>
-                    <span className="font-mono text-[10px] text-faint">+{s.topics.length}</span>
-                  </div>
-                </motion.button>
+                <Reveal key={s.name} delay={i * 0.05} y={12}>
+                  <button
+                    onClick={() => setActive(active?.name === s.name ? null : s)}
+                    className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                      active?.name === s.name
+                        ? 'border-accent/40 bg-accent/[0.08]'
+                        : 'border-white/8 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                    }`}
+                    aria-pressed={active?.name === s.name}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-ink">{s.name}</span>
+                      <span className="font-mono text-[10px] text-faint">+{s.topics.length}</span>
+                    </div>
+                  </button>
+                </Reveal>
               ))}
             </div>
 
             {/* drill-down */}
-            <AnimatePresence>
-              {active && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.35 }}
-                  className="overflow-hidden"
-                >
-                  <div className="relative mt-6 rounded-2xl border border-white/10 bg-space-950/60 p-5">
+            {active && (
+              <div className="g-enter overflow-hidden">
+                <div className="relative mt-6 rounded-2xl border border-white/10 bg-space-950/60 p-5">
                     <button
                       onClick={() => setActive(null)}
                       className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-ink"
@@ -107,9 +95,8 @@ export function SyllabusUniverse() {
                       )}
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              </div>
+            )}
           </div>
         </Reveal>
       </div>

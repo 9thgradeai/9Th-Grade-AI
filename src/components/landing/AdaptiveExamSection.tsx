@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { SectionHeading, Reveal } from './Reveal'
 import { Progress } from '@/components/ui'
@@ -34,19 +33,13 @@ export function AdaptiveExamSection() {
 
               <div className="mt-6 grid grid-cols-2 gap-5">
                 {metrics.map((m, i) => (
-                  <motion.div
-                    key={m.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.08 }}
-                  >
+                  <Reveal key={m.label} delay={i * 0.08} y={10}>
                     <div className="flex items-baseline justify-between">
                       <span className="text-[11px] uppercase tracking-[0.14em] text-faint">{m.label}</span>
                       <span className={`font-mono text-xl font-semibold ${m.tone}`}>{m.value}%</span>
                     </div>
                     <Progress value={m.value} className="mt-2" />
-                  </motion.div>
+                  </Reveal>
                 ))}
               </div>
 

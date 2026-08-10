@@ -1,5 +1,5 @@
+import { type CSSProperties } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { LayoutDashboard, Target, Brain, Dumbbell, LineChart, Trophy, LogOut } from 'lucide-react'
 import { Logo } from '@/components/navigation/Logo'
 import { CosmicHorizon } from '@/components/horizon'
@@ -89,14 +89,12 @@ export function AppShell() {
         </nav>
       </header>
 
-      <motion.main
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+      <main
+        className="g-enter mx-auto max-w-6xl px-4 py-8 sm:px-6"
+        style={{ '--enter-y': '12px', '--enter-delay': '0s' } as CSSProperties}
       >
         <Outlet />
-      </motion.main>
+      </main>
     </div>
   )
 }

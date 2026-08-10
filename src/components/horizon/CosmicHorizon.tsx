@@ -4,19 +4,11 @@
      - StellarField (one Canvas — ambient stars)
      - Horizon     (CSS luminous boundary)
    A lightweight controller maps page scroll to the active semantic phase,
-   driving the horizon's position/opacity (Framer Motion) and the nebula
-   accents (direct style writes, smoothed by CSS transitions).
-
-   Variants:
-     cinematic — full landing experience, scroll-driven, pulse.
-     ambient   — quiet authenticated background, no scroll animation.
-     static    — a single still frame for hero cards.
-
-   Never sets React state per frame; the canvas and DOM are driven through
-   refs and MotionValues. */
+   driving the horizon's position/opacity and the nebula accents (direct
+   style writes, smoothed by a rAF spring, same feel as the original
+   framer-motion MotionValues). */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 'framer-motion'
 import { StellarField } from './StellarField'
 import { HorizonContext, type HorizonRegistration } from './context'
 import { ATMOSPHERE } from './phases'
@@ -50,6 +42,7 @@ export function CosmicHorizon({
   const accentBlueRef = useRef<HTMLDivElement>(null)
   const accentVioletRef = useRef<HTMLDivElement>(null)
   const horizonStrengthRef = useRef<HTMLDivElement>(null)
+  const horizonRef = useRef<HTMLDivElement>(null)
 
   const sections = useRef<HorizonRegistration[]>([])
 
@@ -153,19 +146,60 @@ export function CosmicHorizon({
     }
   }, [cinematic])
 
-  /* --- Macro motion (cinematic): horizon travel + nebula intensity. --- */
-  const { scrollYProgress } = useScroll()
-  const scrollSpring = useSpring(scrollYProgress, { stiffness: 40, damping: 20, mass: 0.5 })
-  const horizonTop = useTransform(scrollSpring, [0, 1], ['64%', '12%'])
-  const horizonOpacity = useTransform(scrollSpring, [0, 0.35, 0.8, 1], [0.3, 0.55, 0.75, 0.82])
-  const nebulaOpacity = useTransform(scrollSpring, [0, 1], [0.18, 0.5])
+  /* --- Macro scroll motion (cinematic): horizon travel + nebula intensity +
+       phase detection.  Replaces framer-motion useScroll/useSpring/useTransform
+       with a rAF-spring loop (same smoothness, no dependency). --- */
+  useEffect(() => {
+    if (!cinematic) return
+    let raf = 0
+    let rawProgress = 0
+    let springProgress = 0
 
-  useMotionValueEvent(scrollYProgress, 'change', () => updatePhaseRef.current())
+    const onScroll = () => {
+      const docH = document.documentElement.scrollHeight || 1
+      const winH = window.innerHeight || 1
+      rawProgress = Math.max(0, Math.min(1, window.scrollY / Math.max(1, docH - winH)))
+    }
+    onScroll() // initial value
 
-  const horizonStyle = cinematic
-    ? { top: horizonTop, opacity: horizonOpacity }
-    : { top: '68%', opacity: 0.42 }
+    const tick = () => {
+      springProgress += (rawProgress - springProgress) * 0.06
 
+      /* Phase detection (same logic as updatePhase). */
+      updatePhaseRef.current()
+
+      /* Horizon: top 64% → 12%, opacity piecewise [0,0.35,0.8,1]→[0.3,0.55,0.75,0.82]. */
+      const hor = horizonRef.current
+      if (hor) {
+        hor.style.top = `${(0.64 - springProgress * 0.52) * 100}%`
+        const sp = springProgress
+        const hOp = sp < 0.35
+          ? 0.3 + (sp / 0.35) * 0.25
+          : sp < 0.8
+            ? 0.55 + ((sp - 0.35) / 0.45) * 0.2
+            : 0.75 + ((sp - 0.8) / 0.2) * 0.07
+        hor.style.opacity = String(hOp)
+      }
+
+      /* Nebula: opacity 0.18 → 0.5 */
+      if (nebulaRef.current) {
+        nebulaRef.current.style.opacity = String(0.18 + springProgress * 0.32)
+      }
+
+      raf = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [cinematic])
+
+  const nebulaInitialOpacity = cinematic ? '0.18' : '0.14'
+  const horizonInitialTop = cinematic ? '64%' : '68%'
+  const horizonInitialOpacity = cinematic ? '0.3' : '0.42'
   const staticPhase = cinematic ? undefined : 'mastery'
 
   return (
@@ -185,7 +219,11 @@ export function CosmicHorizon({
         <div ref={spaceRef} className="hx-space absolute" />
 
         {/* Layer 3 — base nebula (scroll-driven intensity) */}
-        <motion.div ref={nebulaRef} className="hx-nebula" style={cinematic ? { opacity: nebulaOpacity } : { opacity: 0.14 }} />
+        <div
+          ref={nebulaRef}
+          className="hx-nebula"
+          style={{ opacity: nebulaInitialOpacity }}
+        />
 
         {/* Layer 3 — phase-tinted nebula accents */}
         <div ref={accentBlueRef} className="hx-nebula-blue" />
@@ -201,14 +239,18 @@ export function CosmicHorizon({
 
         {/* Layer 3 — the horizon. Outer wrapper: scroll-driven position/opacity;
             inner .hx-horizon-strength: phase-driven intensity (CSS transition). */}
-        <motion.div className="hx-horizon" style={horizonStyle}>
+        <div
+          ref={horizonRef}
+          className="hx-horizon"
+          style={{ top: horizonInitialTop, opacity: horizonInitialOpacity }}
+        >
           <div ref={horizonStrengthRef} className="hx-horizon-strength">
             <div className="hx-horizon-glow" />
             <div className="hx-horizon-field" />
             <div className="hx-horizon-core" />
             <div className="hx-horizon-focus" />
           </div>
-        </motion.div>
+        </div>
 
         {/* Layer 4 — cinematic framing: vignette (focus the eye) + film grain
             (kills banding, adds texture). Pointer-events off, under content. */}

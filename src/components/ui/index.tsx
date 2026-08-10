@@ -1,6 +1,5 @@
-import { type ReactNode, type ButtonHTMLAttributes, forwardRef } from 'react'
+import { type ReactNode, type ButtonHTMLAttributes, forwardRef, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/cn'
 
 /* ---------- Button ---------- */
@@ -144,14 +143,37 @@ export function Progress({
   barClassName?: string
   showLabel?: boolean
 }) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const el = barRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
   return (
     <div className={cn('relative h-1.5 w-full overflow-hidden rounded-full bg-white/8', className)} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
-      <motion.div
+      <div
+        ref={barRef}
         className={cn('h-full rounded-full bg-gradient-to-r from-accent to-cyan', barClassName)}
-        initial={{ width: 0 }}
-        whileInView={{ width: `${value}%` }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: inView ? `${value}%` : 0,
+          transition: 'width 0.9s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
       />
       {showLabel && (
         <span className="absolute right-0 -top-0.5 font-mono text-[11px] text-ink-soft">

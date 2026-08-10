@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { SectionHeading, Reveal } from './Reveal'
 
 const phases = ['Diagnostic', 'Foundation', 'Syllabus Coverage', 'Weakness Elimination', 'Adaptive Practice', 'Mock Simulation', 'Revision', 'Exam Ready']
@@ -25,21 +24,17 @@ export function RoadmapSection() {
             {phases.map((p, i) => {
               const isLast = i === phases.length - 1
               return (
-                <motion.div
-                  key={p}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08, duration: 0.5 }}
-                  className={`relative flex flex-col gap-2 rounded-2xl border p-4 ${
+                <Reveal key={p} delay={i * 0.08} y={20}>
+                  <div className={`relative flex flex-col gap-2 rounded-2xl border p-4 ${
                     isLast
                       ? 'border-accent/30 bg-accent/[0.07] ring-glow'
                       : 'border-white/8 bg-white/[0.03]'
                   }`}
-                >
-                  <span className="font-mono text-[10px] text-faint">{String(i + 1).padStart(2, '0')}</span>
-                  <span className={`text-sm font-semibold ${isLast ? 'text-accent-hi' : 'text-ink'}`}>{p}</span>
-                </motion.div>
+                  >
+                    <span className="font-mono text-[10px] text-faint">{String(i + 1).padStart(2, '0')}</span>
+                    <span className={`text-sm font-semibold ${isLast ? 'text-accent-hi' : 'text-ink'}`}>{p}</span>
+                  </div>
+                </Reveal>
               )
             })}
           </div>

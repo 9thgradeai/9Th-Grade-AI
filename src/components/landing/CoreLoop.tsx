@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { ArrowDown, Radar, Target, Zap, Gauge, RefreshCw, TrendingUp } from 'lucide-react'
 import { SectionHeading, Reveal } from './Reveal'
 
@@ -30,25 +29,20 @@ export function CoreLoop() {
           <Reveal>
             <div className="flex h-full flex-col justify-center gap-1">
               {stages.map((s, i) => (
-                <motion.div
-                  key={s.key}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.5 }}
-                  className="group flex items-center gap-4 rounded-xl px-3 py-3 transition-colors hover:bg-white/[0.03]"
-                >
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] ${s.color}`}>
-                    <s.icon size={17} />
-                  </span>
-                  <div>
-                    <div className="font-mono text-sm font-semibold tracking-wider text-ink">{s.key}</div>
-                    <div className="text-xs text-muted">{s.label}</div>
+                <Reveal key={s.key} delay={i * 0.1} y={0}>
+                  <div className="group flex items-center gap-4 rounded-xl px-3 py-3 transition-colors hover:bg-white/[0.03]">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] ${s.color}`}>
+                      <s.icon size={17} />
+                    </span>
+                    <div>
+                      <div className="font-mono text-sm font-semibold tracking-wider text-ink">{s.key}</div>
+                      <div className="text-xs text-muted">{s.label}</div>
+                    </div>
+                    {i < stages.length - 1 && (
+                      <ArrowDown size={14} className="ml-auto text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
                   </div>
-                  {i < stages.length - 1 && (
-                    <ArrowDown size={14} className="ml-auto text-faint opacity-0 transition-opacity group-hover:opacity-100" />
-                  )}
-                </motion.div>
+                </Reveal>
               ))}
             </div>
           </Reveal>
