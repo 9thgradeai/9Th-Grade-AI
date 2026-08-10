@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Shield, Landmark, Briefcase, GraduationCap, Sparkles, Check } from 'lucide-react'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
+import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { Button, Progress, Signal } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -84,7 +84,7 @@ export default function Onboarding() {
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      <LivingUniverse mode="onboarding" variant="absolute" interactive />
+      <CosmicHorizon variant="ambient" />
 
       {/* header */}
       <div className="relative z-10 flex items-center justify-between px-6 py-5">

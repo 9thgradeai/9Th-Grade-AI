@@ -37,7 +37,7 @@ export function AnalyticsSection() {
   const pts = traj.map((v, i) => [8 + (i * (w - 16)) / (traj.length - 1), h - 8 - (v / max) * (h - 16)])
 
   return (
-    <section data-universe-state="data" className="relative border-t border-white/6 py-28">
+    <section className="relative border-t border-white/6 py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           eyebrow="Performance intelligence"

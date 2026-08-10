@@ -1,11 +1,11 @@
 import { ArrowLeft } from 'lucide-react'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
+import { CosmicHorizon } from '@/components/horizon'
 import { LinkButton } from '@/components/ui'
 
 export default function NotFound() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
-      <LivingUniverse mode="topic" variant="absolute" />
+      <CosmicHorizon variant="ambient" />
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <span className="font-mono text-7xl font-bold text-gradient-accent">404</span>
         <h1 className="mt-4 text-2xl font-semibold text-ink">This region of the universe is unexplored.</h1>

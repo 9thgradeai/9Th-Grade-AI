@@ -20,6 +20,31 @@ examRoutes.get('/', async (c) => {
   return c.json(exams)
 })
 
+// List all subjects (flat catalog) for the app-wide subject pickers.
+// Registered before `/:slug` so the static path is matched first.
+examRoutes.get('/subjects', async (c) => {
+  const key = cacheKey('subjects', 'all')
+  const cached = await cacheGet(key)
+  if (cached) return c.json(cached)
+  const subjects = await prisma.subject.findMany({
+    orderBy: { sortOrder: 'asc' },
+    include: { topics: true },
+  })
+  await cacheSet(key, subjects, 300)
+  return c.json(subjects)
+})
+
+// List topics for a subject. Registered before `/topics/:id`.
+examRoutes.get('/topics', async (c) => {
+  const subjectId = c.req.query('subjectId')
+  if (!subjectId) return c.json({ error: 'subjectId is required' }, 400)
+  const topics = await prisma.topic.findMany({
+    where: { subjectId },
+    orderBy: { name: 'asc' },
+  })
+  return c.json(topics)
+})
+
 // Get exam by slug
 examRoutes.get('/:slug', async (c) => {
   const slug = c.req.param('slug')

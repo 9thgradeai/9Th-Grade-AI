@@ -24,7 +24,7 @@ export function SyllabusUniverse() {
   const [active, setActive] = useState<null | { name: string; topics: string[] }>(null)
 
   return (
-    <section data-universe-state="constellation" className="relative border-t border-white/6 py-28">
+    <section className="relative border-t border-white/6 py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           eyebrow="Syllabus universe"

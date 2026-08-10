@@ -5,7 +5,7 @@ const phases = ['Diagnostic', 'Foundation', 'Syllabus Coverage', 'Weakness Elimi
 
 export function RoadmapSection() {
   return (
-    <section data-universe-state="trajectory" className="relative border-t border-white/6 py-28">
+    <section className="relative border-t border-white/6 py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           eyebrow="Your roadmap"

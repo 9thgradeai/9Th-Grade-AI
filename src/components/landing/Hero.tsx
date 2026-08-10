@@ -85,7 +85,7 @@ function BrandReveal() {
 export function Hero() {
   return (
     <section
-      data-universe-state="birth"
+     
       className="relative flex min-h-screen flex-col justify-center overflow-hidden"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-space-950 to-transparent" />

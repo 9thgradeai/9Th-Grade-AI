@@ -2,8 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
-import { subjectsToData } from '@/components/universe/universeData'
+import { CosmicHorizon } from '@/components/horizon'
 import { Card, Skeleton, Progress, Signal, Metric } from '@/components/ui'
 import { AIBriefingCard, DailyMissionCard, NextBestAction, MetricTile } from '@/components/dashboard'
 import { cn } from '@/lib/cn'
@@ -45,12 +44,7 @@ export default function Dashboard() {
 
       {/* Universe overview */}
       <Card className="relative h-64 overflow-hidden">
-        <LivingUniverse
-          mode="dashboard"
-          variant="absolute"
-          interactive
-          data={subjectsToData(subjects.data ?? [])}
-        />
+        <CosmicHorizon variant="static" />
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent-hi">Your Preparation Universe</p>

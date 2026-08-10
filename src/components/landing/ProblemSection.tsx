@@ -12,7 +12,7 @@ const questions = [
 
 export function ProblemSection() {
   return (
-    <section data-universe-state="chaos" className="relative py-28">
+    <section className="relative py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink sm:text-4xl md:text-[2.6rem]">

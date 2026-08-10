@@ -4,8 +4,7 @@ import { ArrowLeft, Play, AlertTriangle } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Skeleton, Metric, Badge, Signal } from '@/components/ui'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
-import { buildData } from '@/components/universe/universeData'
+import { CosmicHorizon } from '@/components/horizon'
 
 const mistakes = [
   'Mislabels discount % as profit %',
@@ -49,19 +48,7 @@ export default function Topic() {
       </div>
 
       <Card className="relative h-36 overflow-hidden">
-        <LivingUniverse
-          mode="topic"
-          variant="absolute"
-          data={buildData([
-            {
-              id: t.id,
-              label: t.name,
-              mastery: t.mastery,
-              accuracy: t.accuracy,
-              retention: t.retention,
-            },
-          ])}
-        />
+        <CosmicHorizon variant="static" />
         <div className="absolute inset-0 flex items-center justify-center">
           <Signal tone="accent">Focus node · {t.name}</Signal>
         </div>

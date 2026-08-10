@@ -11,14 +11,11 @@ import { AdaptiveExamSection } from '@/components/landing/AdaptiveExamSection'
 import { MemoryEngineSection } from '@/components/landing/MemoryEngineSection'
 import { AnalyticsSection } from '@/components/landing/AnalyticsSection'
 import { FinalCTA } from '@/components/landing/FinalCTA'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
-import { useUniverseState } from '@/components/universe/useUniverseState'
+import { CosmicHorizon, CosmicSection } from '@/components/horizon'
 
-/* The scroll-driven `useUniverseState` re-renders <Landing/> on every
-   frame of scroll (to feed the canvas timeline). Memoizing each section
-   keeps that per-frame re-render to just <Landing/> + the canvas — the
-   DOM-heavy, framer-motion sections skip it entirely. They receive no
-   props, so memo is safe here. */
+/* Each landing section is memoized because the fixed Cosmic Horizon
+   background animates independently of React; the sections receive no
+   props, so memo is safe and keeps re-renders minimal. */
 const HeroM = memo(Hero)
 const ProblemSectionM = memo(ProblemSection)
 const CoreLoopM = memo(CoreLoop)
@@ -32,30 +29,27 @@ const MemoryEngineSectionM = memo(MemoryEngineSection)
 const AnalyticsSectionM = memo(AnalyticsSection)
 const FinalCTAM = memo(FinalCTA)
 
+/* CosmicSection marks the narrative anchors; sections between them inherit
+   the nearest preceding phase, so the atmosphere evolves dark → structured
+   → luminous as the visitor moves down the page. */
 export default function Landing() {
-  const { progress, intensity } = useUniverseState()
   return (
-    <div className="noise">
-      {/* Single fixed full-viewport universe — scroll drives the cosmic timeline. */}
-      <LivingUniverse
-        mode="landing"
-        variant="fixed"
-        interactive
-        progress={progress}
-        intensity={intensity}
-      />
-      <HeroM />
-      <ProblemSectionM />
-      <CoreLoopM />
-      <AIEngineSectionM />
-      <EveryAnswerSectionM />
-      <RoadmapSectionM />
-      <SyllabusUniverseM />
-      <ExamSelectorM />
-      <AdaptiveExamSectionM />
-      <MemoryEngineSectionM />
-      <AnalyticsSectionM />
-      <FinalCTAM />
+    <div className="noise relative">
+      <CosmicHorizon variant="cinematic" />
+      <div className="relative z-10">
+        <CosmicSection phase="hero"><HeroM /></CosmicSection>
+        <ProblemSectionM />
+        <CoreLoopM />
+        <CosmicSection phase="ai-engine"><AIEngineSectionM /></CosmicSection>
+        <EveryAnswerSectionM />
+        <CosmicSection phase="strategy"><RoadmapSectionM /></CosmicSection>
+        <SyllabusUniverseM />
+        <ExamSelectorM />
+        <CosmicSection phase="adaptive-practice"><AdaptiveExamSectionM /></CosmicSection>
+        <MemoryEngineSectionM />
+        <CosmicSection phase="analytics"><AnalyticsSectionM /></CosmicSection>
+        <CosmicSection phase="mastery"><FinalCTAM /></CosmicSection>
+      </div>
     </div>
   )
 }

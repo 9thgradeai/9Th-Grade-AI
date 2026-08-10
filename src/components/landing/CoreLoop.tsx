@@ -13,7 +13,7 @@ const stages = [
 
 export function CoreLoop() {
   return (
-    <section data-universe-state="formation" className="relative border-t border-white/6 py-28">
+    <section className="relative border-t border-white/6 py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           eyebrow="The core loop"

@@ -4,8 +4,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Progress, Skeleton, Metric, Signal } from '@/components/ui'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
-import { topicsToData } from '@/components/universe/universeData'
+import { CosmicHorizon } from '@/components/horizon'
 
 export default function Subject() {
   const { id } = useParams<{ id: string }>()
@@ -50,11 +49,7 @@ export default function Subject() {
 
       {/* universe */}
       <Card className="relative h-40 overflow-hidden">
-        <LivingUniverse
-          mode="subject"
-          variant="absolute"
-          data={topicsToData(s, topics.data ?? [])}
-        />
+        <CosmicHorizon variant="static" />
         <div className="absolute inset-0 flex items-center justify-center">
           <p className="text-sm text-muted">Zooming into the {s.name} planetary system.</p>
         </div>

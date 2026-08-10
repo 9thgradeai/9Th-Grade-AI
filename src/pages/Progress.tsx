@@ -2,8 +2,7 @@ import { motion } from 'framer-motion'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Skeleton, Progress, Metric, Signal, Badge } from '@/components/ui'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
-import { subjectsToData } from '@/components/universe/universeData'
+import { CosmicHorizon } from '@/components/horizon'
 
 export default function ProgressPage() {
   const perf = useAsync(() => api.getPerformance())
@@ -36,11 +35,7 @@ export default function ProgressPage() {
 
       {/* overview universe */}
       <Card className="relative h-48 overflow-hidden">
-        <LivingUniverse
-          mode="progress"
-          variant="absolute"
-          data={subjectsToData(subjects.data ?? [])}
-        />
+        <CosmicHorizon variant="static" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent-hi">Exam Readiness</p>

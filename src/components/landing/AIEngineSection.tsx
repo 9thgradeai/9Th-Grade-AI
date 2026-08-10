@@ -19,7 +19,7 @@ function Chip({ label }: { label: string }) {
 
 export function AIEngineSection() {
   return (
-    <section data-universe-state="organization" className="relative border-t border-white/6 py-28">
+    <section className="relative border-t border-white/6 py-28">
       <div className="pointer-events-none absolute inset-0 grid-fade opacity-60" />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading

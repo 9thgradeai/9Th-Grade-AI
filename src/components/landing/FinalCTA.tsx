@@ -1,15 +1,12 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { LivingUniverse } from '@/components/universe/LivingUniverse'
 import { LinkButton } from '@/components/ui'
 
 export function FinalCTA() {
   return (
     <section
-      data-universe-state="convergence"
       className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden py-28"
     >
-      <LivingUniverse mode="results" variant="absolute" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-space-950 to-transparent" />
 
       <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-4 text-center">

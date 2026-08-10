@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Target, Brain, Dumbbell, LineChart, Trophy, LogOut } from 'lucide-react'
 import { Logo } from '@/components/navigation/Logo'
+import { CosmicHorizon } from '@/components/horizon'
 import { cn } from '@/lib/cn'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
@@ -21,8 +22,8 @@ export function AppShell() {
 
   return (
     <div className="relative min-h-screen">
-      {/* ambient background */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(79,124,255,0.12),transparent)]" />
+      {/* quiet ambient background for the authenticated application */}
+      <CosmicHorizon variant="ambient" className="fixed inset-0 -z-10" />
 
       <header className="sticky top-0 z-40 border-b border-white/8 bg-space-950/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">

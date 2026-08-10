@@ -4,15 +4,6 @@
    mock data directly — it goes through services/api.ts.
    ============================================================ */
 
-export type UniverseMode =
-  | 'landing'
-  | 'onboarding'
-  | 'dashboard'
-  | 'subject'
-  | 'topic'
-  | 'progress'
-  | 'results'
-
 export interface User {
   id: string
   name: string
