@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
@@ -45,8 +44,7 @@ export default function Register() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <CosmicHorizon variant="ambient" />
+    <div className="term-bg relative flex min-h-screen items-center justify-center px-4">
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex justify-center">

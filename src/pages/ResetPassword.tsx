@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams, Navigate } from 'react-router-dom'
 import { ArrowRight, Check } from 'lucide-react'
-import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { client, ApiError } from '@/lib/client'
@@ -39,8 +38,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <CosmicHorizon variant="ambient" />
+    <div className="term-bg relative flex min-h-screen items-center justify-center px-4">
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex justify-center"><Logo /></div>
         <div className="rounded-2xl border border-white/10 bg-space-900/80 p-6 backdrop-blur-xl sm:p-8">

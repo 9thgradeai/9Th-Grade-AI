@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Shield, Landmark, Briefcase, GraduationCap, Sparkles, Check } from 'lucide-react'
-import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { Button, Progress, Signal } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -111,8 +110,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <CosmicHorizon variant="ambient" />
+    <div className="term-bg relative flex min-h-screen flex-col">
 
       {/* header */}
       <div className="relative z-10 flex items-center justify-between px-6 py-5">
