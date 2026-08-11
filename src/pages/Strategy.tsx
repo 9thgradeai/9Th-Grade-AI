@@ -2,7 +2,8 @@ import { motion } from 'framer-motion'
 import { RefreshCw, Clock, Target, SlidersHorizontal } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
-import { Card, Progress, Skeleton, Signal, Metric, Button, Badge } from '@/components/ui'
+import { isFeatureLocked } from '@/lib/client'
+import { Card, Progress, Skeleton, Signal, Metric, Button, Badge, UpgradeNotice } from '@/components/ui'
 
 const week = [
   { day: 'Day 1', focus: 'Math + English', detail: 'Profit/Loss, Grammar' },
@@ -26,6 +27,8 @@ export default function Strategy() {
 
       {roadmap.loading ? (
         <Skeleton className="h-40 rounded-2xl" />
+      ) : isFeatureLocked(roadmap.errorObject) ? (
+        <UpgradeNotice feature="AI Strategy" />
       ) : (
         roadmap.data && (
           <>

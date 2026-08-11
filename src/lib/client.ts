@@ -48,6 +48,11 @@ export function isNetworkError(e: unknown): boolean {
   return e instanceof ApiError && e.status === 0
 }
 
+/** Whether the backend rejected the request because a paid feature is locked. */
+export function isFeatureLocked(e: unknown): boolean {
+  return e instanceof ApiError && e.code === 'FEATURE_LOCKED'
+}
+
 function requestId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()

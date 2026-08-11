@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
+import { isFeatureLocked } from '@/lib/client'
 import { CosmicHorizon } from '@/components/horizon'
-import { Card, Skeleton, Progress, Signal, Metric } from '@/components/ui'
+import { Card, Skeleton, Progress, Signal, Metric, UpgradeNotice } from '@/components/ui'
 import { AIBriefingCard, DailyMissionCard, NextBestAction, MetricTile } from '@/components/dashboard'
 import { cn } from '@/lib/cn'
 
@@ -72,7 +73,13 @@ export default function Dashboard() {
       {/* Next best action + AI briefing */}
       <div className="grid gap-4 lg:grid-cols-2">
         {recommendations.loading ? <Skeleton className="h-44 rounded-2xl" /> : <NextBestAction />}
-        {briefing.loading ? <Skeleton className="h-44 rounded-2xl" /> : briefing.data ? <AIBriefingCard briefing={briefing.data} /> : null}
+        {briefing.loading ? (
+          <Skeleton className="h-44 rounded-2xl" />
+        ) : isFeatureLocked(briefing.errorObject) ? (
+          <UpgradeNotice feature="AI Briefing" />
+        ) : briefing.data ? (
+          <AIBriefingCard briefing={briefing.data} />
+        ) : null}
       </div>
 
       {/* Metric tiles */}

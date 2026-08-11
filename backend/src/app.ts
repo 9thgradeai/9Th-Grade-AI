@@ -82,6 +82,8 @@ protectedApp.route('/tests', testRoutes)
 protectedApp.route('/performance', performanceRoutes)
 protectedApp.route('/dashboard', dashboardRoutes)
 protectedApp.route('/rank', rankRoutes)
+// Paid-feature gates for /strategy, /ai/*, /revision/* live inside their route
+// modules (featureGate.use('*', ...)) so subpaths are matched reliably.
 protectedApp.route('/', strategyRoutes)
 protectedApp.route('/revision', revisionRoutes)
 protectedApp.route('/payments', paymentsRoutes)

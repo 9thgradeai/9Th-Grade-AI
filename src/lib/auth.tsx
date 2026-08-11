@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@/lib/types'
-import { client, getToken, setToken } from '@/lib/client'
+import { client, getToken, setToken, isNetworkError, ApiError } from '@/lib/client'
 import { clearApiCache } from '@/lib/api'
 
 /* ============================================================
@@ -18,7 +18,7 @@ import { clearApiCache } from '@/lib/api'
    - No silent mock-user injection.
    ============================================================ */
 
-export type AuthState = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED'
+export type AuthState = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED' | 'BACKEND_UNAVAILABLE'
 
 interface RegisterPayload {
   name: string
@@ -53,6 +53,8 @@ interface AuthContextValue {
   logout: () => Promise<void>
   /** Force-transition to UNAUTHENTICATED (called by client.ts on 401). */
   handleUnauthorized: () => void
+  /** Re-run session bootstrap (e.g. after the backend comes back online). */
+  retry: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -98,8 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await client.get<UserPayload>('/users/me')
       setAuthenticated(me)
-    } catch {
-      // 401 / expired / network error → unauthenticated
+    } catch (err) {
+      // Only a definitive 401 (invalid/expired token) means logged out. A
+      // network error or 5xx means the backend is unreachable — never wipe a
+      // valid session over a connectivity blip; surface a retry instead.
+      if (isNetworkError(err) || (err instanceof ApiError && err.status >= 500)) {
+        setState('BACKEND_UNAVAILABLE')
+        return
+      }
       setUnauthenticated()
     }
   }, [setAuthenticated, setUnauthenticated])
@@ -146,6 +154,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthenticated()
   }, [setUnauthenticated])
 
+  const retry = useCallback(async () => {
+    await bootstrap()
+  }, [bootstrap])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       state,
@@ -155,8 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       handleUnauthorized,
+      retry,
     }),
-    [state, user, login, register, logout, handleUnauthorized],
+    [state, user, login, register, logout, handleUnauthorized, retry],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

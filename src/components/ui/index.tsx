@@ -1,5 +1,6 @@
 import { type ReactNode, type ButtonHTMLAttributes, forwardRef, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Crown, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 /* ---------- Button ---------- */
@@ -271,6 +272,39 @@ export function EmptyState({
       <h3 className="text-lg font-semibold text-ink">{title}</h3>
       <p className="max-w-sm text-sm text-muted">{body}</p>
       {action && <div className="mt-2">{action}</div>}
+    </div>
+  )
+}
+
+/* ---------- Feature-gate (paywall) notice ---------- */
+
+export function UpgradeNotice({
+  feature,
+  className,
+}: {
+  /** Human-readable name of the locked feature, e.g. "Mock Tests". */
+  feature: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center gap-3 rounded-2xl border border-accent/20 bg-accent/[0.04] px-6 py-10 text-center',
+        className,
+      )}
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent-hi">
+        <Crown size={18} />
+      </span>
+      <h3 className="text-lg font-semibold text-ink">{feature} is a premium feature</h3>
+      <p className="max-w-sm text-sm text-muted">
+        Unlock unlimited mock tests, adaptive exams, and AI strategy with a Pro plan.
+      </p>
+      <div className="mt-2">
+        <LinkButton to="/pricing" iconRight={<ArrowRight size={14} />}>
+          See plans
+        </LinkButton>
+      </div>
     </div>
   )
 }

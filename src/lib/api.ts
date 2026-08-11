@@ -14,7 +14,7 @@ import type {
   Test,
 } from '@/lib/types'
 import * as data from '@/lib/data'
-import { client } from '@/lib/client'
+import { client, isFeatureLocked } from '@/lib/client'
 
 /* ============================================================
    Service layer. UI components depend on these async functions
@@ -38,11 +38,16 @@ async function withLoading<T>(value: T, ms?: number): Promise<T> {
   return value
 }
 
-/** Try the real backend; on ANY failure (network/5xx/401) return the mock fallback. */
+/**
+ * Try the real backend; on failure return the mock fallback — EXCEPT for a
+ * server-side paywall (402 FEATURE_LOCKED), which is rethrown so the UI can
+ * show an upgrade prompt instead of masking the gate with mock data.
+ */
 async function fromBackend<T>(real: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
   try {
     return await real()
-  } catch {
+  } catch (e) {
+    if (isFeatureLocked(e)) throw e
     return fallback()
   }
 }

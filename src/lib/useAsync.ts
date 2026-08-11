@@ -3,7 +3,11 @@ import { useEffect, useState, useCallback, type DependencyList } from 'react'
 interface AsyncState<T> {
   data: T | null
   loading: boolean
+  /** True on any failure. Kept for backward compatibility. */
   error: boolean
+  /** The thrown error object — lets callers tell a paywall (FEATURE_LOCKED)
+   *  from a generic failure. Null when there is no error. */
+  errorObject: unknown | null
   reload: () => void
 }
 
@@ -12,6 +16,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: DependencyList = []): As
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [errorObject, setErrorObject] = useState<unknown | null>(null)
   const [tick, setTick] = useState(0)
 
   const reload = useCallback(() => setTick((t) => t + 1), [])
@@ -20,12 +25,16 @@ export function useAsync<T>(fn: () => Promise<T>, deps: DependencyList = []): As
     let active = true
     setLoading(true)
     setError(false)
+    setErrorObject(null)
     fn()
       .then((result) => {
         if (active) setData(result)
       })
-      .catch(() => {
-        if (active) setError(true)
+      .catch((e) => {
+        if (active) {
+          setError(true)
+          setErrorObject(e)
+        }
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -36,5 +45,5 @@ export function useAsync<T>(fn: () => Promise<T>, deps: DependencyList = []): As
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick])
 
-  return { data, loading, error, reload }
+  return { data, loading, error, errorObject, reload }
 }
