@@ -1,4 +1,4 @@
-import { Outlet, Navigate } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 
 /**
@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth'
  */
 export default function ProtectedRoute() {
   const { state, retry } = useAuth()
+  const { pathname, search, hash } = useLocation()
 
   /* Still bootstrapping — render nothing (no flicker, per brief §19). */
   if (state === 'INITIALIZING') {
@@ -24,7 +25,13 @@ export default function ProtectedRoute() {
   }
 
   if (state === 'UNAUTHENTICATED') {
-    return <Navigate to="/login" replace />
+    /* Carry the attempted destination to /login so the user lands back where
+       they were after authenticating, instead of always dumping them on the
+       dashboard. Only the path is forwarded; `safeRedirect` on the login side
+       rejects anything that isn't a relative app path. */
+    const attempted = `${pathname}${search}${hash}`
+    const query = attempted && attempted !== '/' ? `?redirect=${encodeURIComponent(attempted)}` : ''
+    return <Navigate to={`/login${query}`} replace />
   }
 
   /* Backend unreachable — keep the session token and offer a retry rather than

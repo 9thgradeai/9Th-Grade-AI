@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { SectionHeading, Reveal } from './Reveal'
 import { Progress } from '@/components/ui'
 
@@ -53,12 +54,12 @@ export function AdaptiveExamSection() {
                 <p className="mt-1 text-sm text-muted">Review the UN system and complete 20 targeted questions.</p>
               </div>
 
-              <a
-                href="/onboarding"
+              <Link
+                to="/onboarding"
                 className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent-hi transition-colors hover:text-ink"
               >
                 Start Targeted Practice <ArrowRight size={15} />
-              </a>
+              </Link>
             </div>
           </Reveal>
 

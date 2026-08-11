@@ -4,6 +4,7 @@ import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { AppShell } from '@/components/layout/AppShell'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const Landing = lazy(() => import('@/pages/Landing'))
 const HowItWorks = lazy(() => import('@/pages/HowItWorks'))
@@ -72,48 +73,50 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route element={<PublicLayout />}>
-          <Route index element={<Landing />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/exams" element={<Exams />} />
-          <Route path="/exams/:slug" element={<ExamDetail />} />
-          <Route path="/ai-engine" element={<AIEngine />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/about" element={<About />} />
-        </Route>
-
-        {/* Auth — immersive, no chrome */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-
-        {/* Authenticated application — all routes gated by ProtectedRoute */}
-        <Route path="/" element={<AppShell />}>
-          <Route element={<ProtectedRoute />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="subjects/:id" element={<Subject />} />
-            <Route path="topics/:id" element={<Topic />} />
-            <Route path="practice" element={<Practice />} />
-            <Route path="mock-tests" element={<MockTests />} />
-            <Route path="mock-tests/:id" element={<MockTest />} />
-            <Route path="results/:id" element={<Results />} />
-            <Route path="strategy" element={<Strategy />} />
-            <Route path="memory" element={<Memory />} />
-            <Route path="progress" element={<Progress />} />
-            <Route path="rank" element={<Rank />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
+      <ErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route index element={<Landing />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/:slug" element={<ExamDetail />} />
+            <Route path="/ai-engine" element={<AIEngine />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/about" element={<About />} />
           </Route>
-        </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      </Suspense>
+          {/* Auth — immersive, no chrome */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* Authenticated application — all routes gated by ProtectedRoute */}
+          <Route path="/" element={<AppShell />}>
+            <Route element={<ProtectedRoute />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="subjects/:id" element={<Subject />} />
+              <Route path="topics/:id" element={<Topic />} />
+              <Route path="practice" element={<Practice />} />
+              <Route path="mock-tests" element={<MockTests />} />
+              <Route path="mock-tests/:id" element={<MockTest />} />
+              <Route path="results/:id" element={<Results />} />
+              <Route path="strategy" element={<Strategy />} />
+              <Route path="memory" element={<Memory />} />
+              <Route path="progress" element={<Progress />} />
+              <Route path="rank" element={<Rank />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

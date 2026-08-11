@@ -1,21 +1,25 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
 import { ApiError } from '@/lib/client'
+import { safeRedirect } from '@/lib/redirect'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  /* Resolve once; `safeRedirect` guarantees this is a relative app path. */
+  const redirect = safeRedirect(searchParams.get('redirect'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && user) return <Navigate to="/dashboard" replace />
+  if (!loading && user) return <Navigate to={redirect ?? '/dashboard'} replace />
   if (loading) return null
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,7 +28,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/dashboard', { replace: true })
+      navigate(redirect ?? '/dashboard', { replace: true })
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 0) setError('Backend is not available. Please try again later.')
