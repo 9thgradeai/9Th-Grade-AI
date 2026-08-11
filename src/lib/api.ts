@@ -40,16 +40,19 @@ async function withLoading<T>(value: T, ms?: number): Promise<T> {
 }
 
 /**
- * Try the real backend; on failure return the mock fallback — EXCEPT for a
- * server-side paywall (402 FEATURE_LOCKED), which is rethrown so the UI can
- * show an upgrade prompt instead of masking the gate with mock data.
+ * Try the real backend. The bundled mock `data/*` is a DEV-ONLY fallback so
+ * local work isn't blocked by a missing API. In production there is exactly
+ * ONE server-state source of truth: the real backend. Any failure (except a
+ * paywall, which must surface as an upgrade prompt) is rethrown so the UI
+ * shows a real error/empty state instead of fabricating data.
  */
 async function fromBackend<T>(real: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
   try {
     return await real()
   } catch (e) {
     if (isFeatureLocked(e)) throw e
-    return fallback()
+    if (import.meta.env.DEV) return fallback()
+    throw e
   }
 }
 
@@ -60,7 +63,7 @@ const valueCache = new Map<string, { value: unknown; expiresAt: number }>()
 /**
  * Dedup concurrent identical calls; optionally cache resolved values for
  * `ttlMs`. `ttlMs` is used only for static catalog reads. Never caches
- * rejections — but `fromBackend` never rejects (it falls back to mock).
+ * rejections.
  */
 function memo<T>(key: string, real: () => Promise<T>, fallback: () => Promise<T>, ttlMs?: number): Promise<T> {
   if (ttlMs) {

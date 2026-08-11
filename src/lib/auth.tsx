@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@/lib/types'
-import { client, getToken, setToken, isNetworkError, ApiError } from '@/lib/client'
+import { client, setToken, isNetworkError, ApiError } from '@/lib/client'
 import { clearApiCache } from '@/lib/api'
 
 /* ============================================================
@@ -92,11 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* --- Bootstrap: check existing session on mount --- */
   const bootstrap = useCallback(async () => {
-    const token = getToken()
-    if (!token) {
-      setUnauthenticated()
-      return
-    }
+    // The session may come from the HttpOnly cookie (prod) OR an in-memory/dev
+    // token. Always ask the backend — no cookie/token yields a 401 → logged out.
     try {
       const me = await client.get<UserPayload>('/users/me')
       setAuthenticated(me)

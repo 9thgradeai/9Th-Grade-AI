@@ -1,25 +1,31 @@
 /* ============================================================
    HTTP client for the 9Th-Grade AI API.
    One thin, well-behaved fetch wrapper the whole app uses:
-     - base URL from VITE_API_URL (falls back to localhost:3001)
-     - Bearer token from localStorage (cross-origin dev; the backend
-       sets HttpOnly+Secure cookies which don't stick over plain-http
-       localhost, but it also returns `token` in JSON — we use that)
+     - base URL: VITE_API_URL if set, else localhost:3001 in dev, else
+       the same-origin `/api` (proxied to the backend via vercel.json so
+       the HttpOnly auth cookie is same-site and attaches).
+     - session: the backend's HttpOnly+Secure cookie is the durable store;
+       we also keep an in-memory copy for the Bearer header, mirroring to
+       localStorage ONLY in dev (plain-http localhost can't set the cookie).
      - per-request timeout (AbortController)
      - X-Request-Id propagation
      - structured ApiError (status + message + requestId)
+     - single-flight token refresh on 401: renew the session once and retry
+       before ever force-logging-out, so long sessions slide instead of
+       hard-401ing when the 7-day token expires.
      - automatic retry with backoff ONLY for transient network errors
        on idempotent GETs (never for mutations)
    ============================================================ */
-
-export const API_BASE: string =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') ||
-  'http://localhost:3001/api'
 
 const TOKEN_KEY = 'grade.token'
 const DEFAULT_TIMEOUT_MS = 10_000
 const GET_RETRIES = 2
 const RETRY_BASE_MS = 300
+
+/** Same-origin `/api` in production (proxied to the backend, cookie-friendly). */
+const configuredApi = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '')
+export const API_BASE: string =
+  configuredApi || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api')
 
 /** Structured error thrown by the client. `status === 0` means network failure. */
 export class ApiError extends Error {
@@ -35,13 +41,23 @@ export class ApiError extends Error {
   }
 }
 
+/* --- Session token ----------------------------------------------------
+   The HttpOnly cookie is the durable credential. We keep an in-memory copy
+   for the Bearer header; in dev we mirror to localStorage (localhost can't
+   receive the Secure cookie). In prod the token never touches localStorage,
+   so XSS can't exfiltrate a session secret. */
+let memToken: string | null = null
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return memToken ?? (import.meta.env.DEV ? localStorage.getItem(TOKEN_KEY) : null)
 }
 
 export function setToken(token: string | null): void {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  memToken = token
+  if (import.meta.env.DEV) {
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    else localStorage.removeItem(TOKEN_KEY)
+  }
 }
 
 export function isNetworkError(e: unknown): boolean {
@@ -65,22 +81,42 @@ interface RequestOptions {
   timeoutMs?: number
 }
 
-/**
- * Whether a real backend is reachable. In dev the local API (localhost:3001)
- * is the intended target, so we always try it. In production we only attempt
- * network calls when a backend URL is configured — otherwise every request
- * would fire a CORS/net failure to a host that isn't there, spamming the
- * console on a live site. Requests short-circuit to the mock fallback instead.
- */
-const hasBackend = Boolean(import.meta.env.VITE_API_URL) || import.meta.env.DEV
+/* --- Single-flight refresh ---------------------------------------------
+   On 401 we try to renew the session once (POST /auth/refresh, cookie or
+   Bearer). Only if refresh fails do we force-logout. `/auth/*` calls never
+   self-refresh, avoiding loops. */
+let refreshPromise: Promise<string | null> | null = null
 
-async function request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
+function refreshSession(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Id': requestId(),
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+        credentials: 'include',
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      })
+      if (!res.ok) return null
+      const data = (await res.json()) as { token?: string }
+      if (!data.token) return null
+      setToken(data.token)
+      return data.token
+    } catch {
+      return null
+    } finally {
+      refreshPromise = null
+    }
+  })()
+  return refreshPromise
+}
+
+async function request<T>(method: string, path: string, opts: RequestOptions = {}, authRetried = false): Promise<T> {
   const rid = requestId()
-
-  if (!hasBackend) {
-    throw new ApiError(0, 'No backend configured — using local data', rid)
-  }
-
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
 
@@ -102,21 +138,26 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
     if (!res.ok) {
       let message = `Request failed (${res.status})`
       let serverRid: string | undefined
+      let code: string | undefined
       try {
         const body = (await res.json()) as { error?: string; requestId?: string; code?: string }
         if (body.error) message = body.error
         serverRid = body.requestId
+        code = body.code
       } catch {
         /* non-JSON error body */
       }
-      let code: string | undefined
-      try {
-        const codeBody = await res.clone().json() as { code?: string }
-        code = codeBody.code
-      } catch { /* no code in response */ }
       const err = new ApiError(res.status, message, serverRid ?? rid, code)
-      /* Brief §13: on 401, clear auth and redirect — never silently mock. */
+
+      /* 401: renew the session once, then retry; otherwise clear auth. */
       if (res.status === 401) {
+        const isAuthCall = path.startsWith('/auth/')
+        if (!isAuthCall && !authRetried) {
+          const renewed = await refreshSession()
+          if (renewed) {
+            return await request<T>(method, path, opts, true)
+          }
+        }
         window.dispatchEvent(new Event('auth:logout'))
       }
       throw err

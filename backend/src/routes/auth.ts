@@ -167,6 +167,39 @@ authRoutes.get('/session', async (c) => {
   return c.json({ user })
 })
 
+// POST /api/auth/refresh — sliding session. Re-issues a fresh token (and renews
+// the HttpOnly cookie) for a still-valid session, so long-lived usage doesn't
+// hard-401 the moment the 7-day token expires. Cookie-first, then Bearer.
+authRoutes.post('/refresh', async (c) => {
+  const cookieToken = c.req.header('cookie')?.match(/token=([^;]+)/)?.[1]
+  const headerToken = c.req.header('authorization')?.replace('Bearer ', '')
+  const token = cookieToken || headerToken
+  if (!token) return c.json({ error: 'Authentication required' }, 401)
+
+  const payload = verifyToken(token)
+  if (!payload) return c.json({ error: 'Invalid or expired token' }, 401)
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      timezone: true,
+      createdAt: true,
+    },
+  })
+  if (!user) return c.json({ error: 'Authentication required' }, 401)
+
+  const fresh = signToken({ userId: user.id, email: user.email })
+  c.header(
+    'Set-Cookie',
+    `token=${fresh}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`,
+  )
+  return c.json({ user, token: fresh })
+})
+
 /* ------------------------------------------------------------------
    Password reset & email verification (Phase 8 hardening)
    ------------------------------------------------------------------ */
