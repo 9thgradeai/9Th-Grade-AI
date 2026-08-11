@@ -71,7 +71,11 @@ try {
 
   // ---- 8. Root route ----
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' })
-  ok('root / renders landing', await page.getByText('9Th-Grade AI', { exact: true }).first().isVisible().catch(() => true))
+  ok('root / renders landing', await page
+    .getByText('9Th-Grade AI', { exact: true }).first()
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false))
 
 } catch (err) {
   ok('no uncaught error during smoke run', false, String(err && err.message))
