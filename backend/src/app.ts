@@ -6,6 +6,7 @@ import { structuredLogger } from './middleware/logger'
 import { rateLimit } from './middleware/rateLimit'
 import { securityHeaders } from './middleware/security'
 import { cacheMode } from './lib/cache'
+import { initSentry, captureError } from './lib/sentry'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { examRoutes } from './routes/exams'
@@ -29,6 +30,9 @@ import type { AppEnv } from './types/env'
    ============================================================ */
 
 export const prisma = new PrismaClient()
+
+// Sentry — no-op unless SENTRY_DSN is set.
+initSentry()
 
 const app = new Hono()
 
@@ -108,6 +112,7 @@ app.notFound((c) => {
 app.onError((err, c) => {
   const rid = c.req.header('x-request-id') ?? crypto.randomUUID()
   console.error(JSON.stringify({ level: 'error', request_id: rid, route: c.req.path, message: err.message }))
+  captureError(err, { route: c.req.path, requestId: rid })
   return c.json({ error: 'Internal server error', requestId: rid }, 500)
 })
 
