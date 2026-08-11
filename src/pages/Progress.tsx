@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Skeleton, Progress, Metric, Signal, Badge } from '@/components/ui'
-import { CosmicHorizon } from '@/components/horizon'
 
 export default function ProgressPage() {
   const perf = useAsync(() => api.getPerformance())
@@ -33,19 +32,19 @@ export default function ProgressPage() {
         <p className="mt-2 text-sm text-muted">Every interaction, measured. Every trend, visible.</p>
       </div>
 
-      {/* overview universe */}
-      <Card className="relative h-48 overflow-hidden">
-        <CosmicHorizon variant="static" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent-hi">Exam Readiness</p>
-            <p className="mt-1 font-mono text-5xl font-bold text-gradient">{p.examReadiness}%</p>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <Badge tone="success">On track</Badge>
-              <span className="text-[11px] text-faint">Target 90%</span>
-            </div>
+      {/* exam readiness hero */}
+      <Card className="border-accent/20 bg-accent/[0.04] p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent-hi">Exam Readiness</p>
+            <p className="mt-1 font-mono text-5xl font-semibold tracking-tight text-ink">{p.examReadiness}%</p>
+          </div>
+          <div className="text-right">
+            <Badge tone="success">On track</Badge>
+            <p className="mt-1.5 text-[11px] text-faint">Target 90%</p>
           </div>
         </div>
+        <Progress value={p.examReadiness} className="mt-5 h-2" />
       </Card>
 
       {/* metric grid */}
@@ -78,7 +77,7 @@ export default function ProgressPage() {
               </linearGradient>
             </defs>
             {[0, 1, 2, 3].map((i) => (
-              <line key={i} x1="0" x2={w} y1={(h / 4) * i} y2={(h / 4) * i} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+              <line key={i} x1="0" x2={w} y1={(h / 4) * i} y2={(h / 4) * i} stroke="var(--color-border-soft)" strokeWidth="1" />
             ))}
             <path d={`M${pts.map((x) => x.join(',')).join(' L')}`} fill="none" stroke="#4f7cff" strokeWidth="2" strokeLinecap="round" />
             <path d={`M${pts[0][0]},${h - 16} L${pts.map((x) => x.join(',')).join(' L')} L${pts[pts.length - 1][0]},${h - 16} Z`} fill="url(#trfill)" />
@@ -145,7 +144,7 @@ export default function ProgressPage() {
             ['Geometry', 51, 'Math'],
             ['Physics Formulas', 53, 'Science'],
           ].map(([name, value, sub]) => (
-            <div key={name as string} className="rounded-xl border border-white/6 bg-white/[0.02] p-3">
+            <div key={name as string} className="rounded-xl border border-border-soft bg-surface p-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-ink-soft">{name as string}</span>
                 <span className="font-mono text-danger">{value}%</span>

@@ -14,6 +14,15 @@
   --color-space-700: #171c30;
   --color-space-600: #1f2540;
 
+  /* Semantic surfaces — flip between light/dark via `.light` below */
+  --color-canvas: #05060a; /* page background */
+  --color-surface: #0b0e18; /* card / panel */
+  --color-surface-2: #121627; /* hover / inset / raised */
+  --color-surface-3: #1a2036; /* stronger raise */
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-soft: rgba(255, 255, 255, 0.05);
+  --color-overlay: rgba(5, 6, 10, 0.72);
+
   /* Ink */
   --color-ink: #e8ecf6;
   --color-ink-hi: #ffffff;
@@ -86,6 +95,49 @@ body {
   border-radius: 6px;
 }
 
+/* ============================================================
+   Light theme — `.light` on <html>. Dark is the default (`@theme`).
+   Reassigning the CSS variables flips every token-driven utility.
+   ============================================================ */
+.light {
+  color-scheme: light;
+
+  /* Surfaces */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f2f5;
+  --color-surface-3: #e9ebef;
+  --color-border: rgba(16, 20, 30, 0.12);
+  --color-border-soft: rgba(16, 20, 30, 0.07);
+  --color-overlay: rgba(246, 247, 249, 0.86);
+
+  /* Background ramp */
+  --color-space-950: #f6f7f9;
+  --color-space-900: #ffffff;
+  --color-space-850: #f1f2f5;
+  --color-space-800: #e9ebef;
+  --color-space-700: #dde0e6;
+  --color-space-600: #c9cdd6;
+
+  /* Text ramp */
+  --color-ink: #1a1c22;
+  --color-ink-hi: #0c0e12;
+  --color-ink-soft: #3f434c;
+  --color-muted: #6b6f78;
+  --color-faint: #9a9ea8;
+
+  /* Accent — slightly deeper for contrast on light surfaces */
+  --color-accent: #3a66f0;
+  --color-accent-hi: #2a56e0;
+
+  /* Tonal accents — deepened so colored text/chips stay readable on white */
+  --color-cyan: #0891b2;
+  --color-violet: #6d28d9;
+  --color-success: #059669;
+  --color-warning: #b45309;
+  --color-danger: #dc2626;
+}
+
 /* ---------- Utilities ---------- */
 
 @utility glass {
@@ -101,7 +153,7 @@ body {
 }
 
 @utility text-gradient {
-  background: linear-gradient(100deg, #fff 0%, #cdd6f5 45%, #4f7cff 100%);
+  background: linear-gradient(100deg, var(--color-ink-hi) 0%, var(--color-muted) 42%, var(--color-accent) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

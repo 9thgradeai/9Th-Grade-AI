@@ -20,7 +20,7 @@ function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
       onClick={onClick}
       role="switch"
       aria-checked={on}
-      className={cn('relative h-6 w-10 shrink-0 rounded-full transition-colors', on ? 'bg-accent' : 'bg-white/10')}
+      className={cn('relative h-6 w-10 shrink-0 rounded-full transition-colors', on ? 'bg-accent' : 'bg-surface-2')}
     >
       <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all', on ? 'left-[18px]' : 'left-0.5')} />
     </button>
@@ -43,7 +43,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold uppercase tracking-widest text-faint">Language</h2>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {['English-first', 'Bangla-first', 'Banglish'].map((lang) => (
-            <button key={lang} className={cn('rounded-xl border px-3 py-3 text-sm transition-all', lang === 'English-first' ? 'border-accent/50 bg-accent/[0.08] text-ink' : 'border-white/10 bg-white/[0.02] text-muted hover:border-white/25')}>
+            <button key={lang} className={cn('rounded-xl border px-3 py-3 text-sm transition-all', lang === 'English-first' ? 'border-accent/50 bg-accent/[0.08] text-ink' : 'border-border bg-surface text-muted hover:border-border/60')}>
               {lang}
             </button>
           ))}
@@ -70,7 +70,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold uppercase tracking-widest text-faint">Study target</h2>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {['30m', '1h', '2h'].map((t) => (
-            <button key={t} className={cn('rounded-xl border px-3 py-3 text-sm transition-all', t === '2h' ? 'border-accent/50 bg-accent/[0.08] text-ink' : 'border-white/10 bg-white/[0.02] text-muted hover:border-white/25')}>
+            <button key={t} className={cn('rounded-xl border px-3 py-3 text-sm transition-all', t === '2h' ? 'border-accent/50 bg-accent/[0.08] text-ink' : 'border-border bg-surface text-muted hover:border-border/60')}>
               {t}
             </button>
           ))}

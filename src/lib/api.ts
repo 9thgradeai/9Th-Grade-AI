@@ -14,6 +14,7 @@ import type {
   Test,
 } from '@/lib/types'
 import * as data from '@/lib/data'
+import { listMemoryItems } from '@/lib/memoryStore'
 import { client, isFeatureLocked } from '@/lib/client'
 
 /* ============================================================
@@ -435,13 +436,14 @@ export const api = {
   },
 
   getRevisionItems(): Promise<RevisionItem[]> {
+    const withLocal = (items: RevisionItem[]): RevisionItem[] => [...items, ...listMemoryItems()]
     return memo(
       'getRevisionItems',
       () =>
         client
           .get<{ items: { id: string; topic: string; subject: string; memoryStrength: number; lastReviewed: string; nextReview: string; overdue: boolean }[] }>('/revision/items')
-          .then((r) => r.items.map(toRevisionItem)),
-      () => withLoading(data.revisionItems),
+          .then((r) => withLocal(r.items.map(toRevisionItem))),
+      () => withLoading(withLocal(data.revisionItems)),
     )
   },
 

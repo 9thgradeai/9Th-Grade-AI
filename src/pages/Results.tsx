@@ -1,15 +1,36 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, TrendingDown, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, Sparkles, TrendingDown, CheckCircle2, BookmarkPlus, Check } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Progress, Signal, Badge } from '@/components/ui'
 import { getSavedResult } from '@/lib/session'
+import { scoreAttempts, BPSC_RULES } from '@/lib/scoring'
+import { addMemoryItem } from '@/lib/memoryStore'
+import { cn } from '@/lib/cn'
 
 export default function Results() {
   const saved = getSavedResult()
   const sample = useAsync(() => api.getSampleResult())
   const r = saved ?? sample.data
+  const [savedToMemory, setSavedToMemory] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function saveToMemory() {
+    if (!r || saving) return
+    setSaving(true)
+    let label = 'Difficult topic'
+    try {
+      const topic = await api.getTopic(r.targetTopicId ?? '')
+      if (topic?.name) label = topic.name
+    } catch {
+      /* keep fallback label */
+    }
+    addMemoryItem(label, 'Saved from results')
+    setSavedToMemory(label)
+    setSaving(false)
+  }
 
   if (!r) {
     return (
@@ -26,6 +47,18 @@ export default function Results() {
     ['Speed', r.speed],
     ['Retention', r.retention],
   ]
+
+  const breakdown =
+    r.attempts.length > 0
+      ? scoreAttempts(r.attempts)
+      : {
+          correct: r.correct,
+          incorrect: r.total - r.correct,
+          skipped: 0,
+          raw: r.correct,
+          negative: (r.total - r.correct) * Math.abs(BPSC_RULES.wrong),
+          final: r.correct - (r.total - r.correct) * Math.abs(BPSC_RULES.wrong),
+        }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -54,6 +87,25 @@ export default function Results() {
         ))}
       </div>
 
+      {/* negative-marking scoring breakdown */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2">
+          <Signal tone="warning">Scoring · {BPSC_RULES.label}</Signal>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+          <Stat label="Correct" value={String(breakdown.correct)} tone="text-success" />
+          <Stat label="Incorrect" value={String(breakdown.incorrect)} tone="text-danger" />
+          <Stat label="Skipped" value={String(breakdown.skipped)} tone="text-muted" />
+        </div>
+        <div className="mt-5 space-y-2.5">
+          <Row label="Raw score" value={`+${breakdown.raw}`} tone="text-ink-soft" />
+          <Row label="Negative marking" value={`−${breakdown.negative.toFixed(1)}`} tone="text-danger" />
+          <div className="border-t border-border-soft pt-2.5">
+            <Row label="Final score" value={`${breakdown.final.toFixed(1)} / ${breakdown.correct + breakdown.incorrect}`} tone="text-accent-hi" bold />
+          </div>
+        </div>
+      </Card>
+
       {/* where you lost marks */}
       <Card className="p-6">
         <div className="flex items-center gap-2">
@@ -62,7 +114,7 @@ export default function Results() {
         </div>
         <div className="mt-4 space-y-3">
           {Object.entries(r.losses).map(([subject, loss]) => (
-            <div key={subject} className="flex items-center justify-between rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+            <div key={subject} className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3">
               <span className="text-sm text-ink-soft">{subject}</span>
               <span className="font-mono text-sm text-danger">−{loss}</span>
             </div>
@@ -92,11 +144,54 @@ export default function Results() {
         >
           Start Targeted Practice <ArrowRight size={15} />
         </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            onClick={saveToMemory}
+            disabled={saving || !!savedToMemory}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors',
+              savedToMemory
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-border bg-surface text-ink-soft hover:bg-surface-2 hover:text-ink',
+            )}
+          >
+            {savedToMemory ? (
+              <>
+                <Check size={15} /> Saved to Memory
+              </>
+            ) : (
+              <>
+                <BookmarkPlus size={15} /> Save to Memory
+              </>
+            )}
+          </button>
+          <Link to="/memory" className="inline-flex items-center gap-1.5 text-sm text-accent-hi hover:text-ink">
+            Open Memory Ledger <ArrowRight size={14} />
+          </Link>
+        </div>
         <div className="mt-3 flex items-center gap-2">
           <Badge tone="muted">Review mistakes</Badge>
           <Link to="/strategy" className="text-sm text-accent-hi hover:text-ink">View strategy</Link>
         </div>
       </Card>
+    </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="rounded-xl border border-border-soft bg-surface px-3 py-3">
+      <div className={`font-mono text-2xl font-semibold ${tone}`}>{value}</div>
+      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-faint">{label}</div>
+    </div>
+  )
+}
+
+function Row({ label, value, tone, bold }: { label: string; value: string; tone: string; bold?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-muted">{label}</span>
+      <span className={`font-mono text-sm ${tone} ${bold ? 'font-semibold' : ''}`}>{value}</span>
     </div>
   )
 }

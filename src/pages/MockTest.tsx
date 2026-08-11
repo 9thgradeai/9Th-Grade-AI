@@ -72,7 +72,7 @@ export default function MockTest() {
               ['Duration', `${Math.round((questions.length * 1.2) * 100) / 100} min`],
               ['Difficulty', 'Adaptive'],
             ].map(([k, v]) => (
-              <div key={k} className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+              <div key={k} className="rounded-xl border border-border bg-surface p-4">
                 <div className="text-[11px] uppercase tracking-wider text-faint">{k}</div>
                 <div className="mt-1 font-mono text-sm text-ink">{v}</div>
               </div>

@@ -1,10 +1,11 @@
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
-import { Card, Progress, Skeleton, Metric, Signal } from '@/components/ui'
-import { CosmicHorizon } from '@/components/horizon'
+import { Card, Progress, Skeleton, Metric, Signal, Badge } from '@/components/ui'
+import { subjectById } from '@/lib/syllabus'
+import type { Topic } from '@/lib/types'
 
 export default function Subject() {
   const { id } = useParams<{ id: string }>()
@@ -22,7 +23,24 @@ export default function Subject() {
   if (!subject.data) return <p className="text-muted">We couldn't load this subject.</p>
 
   const s = subject.data
-  const weakest = [...(topics.data ?? [])].sort((a, b) => a.mastery - b.mastery)[0]
+  const syllabus = subjectById(s.id)
+  const list = topics.data ?? []
+  const weakest = [...list].sort((a, b) => a.mastery - b.mastery)[0]
+
+  // Group topics under the canonical syllabus sections — each topic assigned to
+  // exactly one section (first match wins) so reused placeholder ids don't duplicate.
+  const grouped = syllabus
+    ? syllabus.sections.map((section) => ({
+        name: section.name,
+        topics: list.filter((t) => section.topics.some((st) => st.topicId === t.id)),
+      }))
+    : null
+  const seen = new Set<string>()
+  const uniqueGrouped = grouped?.map((g) => ({
+    name: g.name,
+    topics: g.topics.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true))),
+  }))
+  const ungrouped = uniqueGrouped ? list.filter((t) => !seen.has(t.id)) : list
 
   return (
     <div className="space-y-8">
@@ -35,7 +53,7 @@ export default function Subject() {
             <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{s.name}</h1>
             {s.nameBn && <p className="mt-1 lang-bn text-sm text-faint">{s.nameBn}</p>}
           </div>
-          <Signal tone="cyan">{s.weight} marks</Signal>
+          <Signal tone="cyan">{s.weight} / 200 marks</Signal>
         </motion.div>
       </div>
 
@@ -47,12 +65,12 @@ export default function Subject() {
         <Metric label="Retention" value={`${s.retention}%`} tone="success" />
       </div>
 
-      {/* universe */}
-      <Card className="relative h-40 overflow-hidden">
-        <CosmicHorizon variant="static" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-sm text-muted">Zooming into the {s.name} planetary system.</p>
-        </div>
+      {/* progress note */}
+      <Card className="border-accent/20 bg-accent/[0.04] p-5">
+        <p className="text-sm text-muted">
+          You're at <span className="font-medium text-ink">{s.mastery}% mastery</span> in {s.name}
+          {s.mastery < 60 ? ' — a weak area worth prioritising.' : ' — keep the momentum.'}
+        </p>
       </Card>
 
       {/* AI recommendation */}
@@ -68,26 +86,53 @@ export default function Subject() {
         </Card>
       )}
 
-      {/* topics */}
-      <div>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-faint">Topics</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(topics.data ?? []).map((t, i) => (
-            <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Link to={`/topics/${t.id}`} className="group block rounded-2xl border border-white/8 bg-white/[0.03] p-5 transition-all hover:border-white/20 hover:bg-white/[0.05]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[15px] font-medium text-ink group-hover:text-accent-hi">{t.name}</span>
-                  <span className="font-mono text-sm text-muted">{t.mastery}%</span>
-                </div>
-                <Progress value={t.mastery} className="mt-3" barClassName={t.mastery < 55 ? 'from-danger to-warning' : undefined} />
-                <div className="mt-2 flex justify-between text-[11px] text-faint">
-                  <span>Accuracy {t.accuracy}%</span>
-                  <span>Retention {t.retention}%</span>
-                </div>
-              </Link>
-            </motion.div>
+      {/* topics — grouped by syllabus section */}
+      {uniqueGrouped ? (
+        <div className="space-y-6">
+          {uniqueGrouped.map((g) => (
+            <TopicGroup key={g.name} name={g.name} topics={g.topics} />
           ))}
+          {ungrouped.length > 0 && <TopicGroup name="Other" topics={ungrouped} />}
         </div>
+      ) : (
+        <TopicGroup name="Topics" topics={list} />
+      )}
+    </div>
+  )
+}
+
+function TopicGroup({ name, topics }: { name: string; topics: Topic[] }) {
+  if (topics.length === 0) return null
+  const weak = topics.filter((t) => t.mastery < 55).length
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-faint">{name}</h2>
+        {weak > 0 && (
+          <Badge tone="warning">
+            <AlertTriangle size={11} /> {weak} weak
+          </Badge>
+        )}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {topics.map((t, i) => (
+          <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <Link
+              to={`/topics/${t.id}`}
+              className="group block rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border hover:bg-surface-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-ink group-hover:text-accent-hi">{t.name}</span>
+                <span className={`font-mono text-sm ${t.mastery < 55 ? 'text-danger' : 'text-muted'}`}>{t.mastery}%</span>
+              </div>
+              <Progress value={t.mastery} className="mt-3" barClassName={t.mastery < 55 ? 'from-danger to-warning' : undefined} />
+              <div className="mt-2 flex justify-between text-[11px] text-faint">
+                <span>Accuracy {t.accuracy}%</span>
+                <span>Retention {t.retention}%</span>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
       </div>
     </div>
   )

@@ -93,16 +93,16 @@ export const exams: Exam[] = [
 /* --- BCS subject structure --- */
 
 export const subjects: Subject[] = [
-  { id: 's_bn', examId: 'exam_bcs', name: 'Bangla', nameBn: 'বাংলা', weight: 35, mastery: 68, accuracy: 74, speed: 80, retention: 71 },
-  { id: 's_en', examId: 'exam_bcs', name: 'English', nameBn: 'ইংরেজি', weight: 35, mastery: 61, accuracy: 66, speed: 78, retention: 60 },
-  { id: 's_bd', examId: 'exam_bcs', name: 'Bangladesh Affairs', nameBn: 'বাংলাদেশ বিষয়াবলি', weight: 30, mastery: 72, accuracy: 79, speed: 84, retention: 77 },
-  { id: 's_int', examId: 'exam_bcs', name: 'International Affairs', nameBn: 'আন্তর্জাতিক বিষয়াবলি', weight: 20, mastery: 48, accuracy: 54, speed: 72, retention: 44 },
+  { id: 's_bn', examId: 'exam_bcs', name: 'Bangla Language & Literature', nameBn: 'বাংলা ভাষা ও সাহিত্য', weight: 30, mastery: 68, accuracy: 74, speed: 80, retention: 71 },
+  { id: 's_en', examId: 'exam_bcs', name: 'English Language and Literature', nameBn: 'ইংরেজি ভাষা ও সাহিত্য', weight: 30, mastery: 61, accuracy: 66, speed: 78, retention: 60 },
+  { id: 's_bd', examId: 'exam_bcs', name: 'Bangladesh Affairs', nameBn: 'বাংলাদেশ বিষয়াবলি', weight: 25, mastery: 72, accuracy: 79, speed: 84, retention: 77 },
+  { id: 's_int', examId: 'exam_bcs', name: 'International Affairs', nameBn: 'আন্তর্জাতিক বিষয়াবলি', weight: 25, mastery: 48, accuracy: 54, speed: 72, retention: 44 },
+  { id: 's_geo', examId: 'exam_bcs', name: 'Geography, Environment & Disaster Management', nameBn: 'ভূগোল, পরিবেশ ও দুর্যোগ ব্যবস্থাপনা', weight: 10, mastery: 60, accuracy: 65, speed: 74, retention: 62 },
   { id: 's_sci', examId: 'exam_bcs', name: 'General Science', nameBn: 'সাধারণ বিজ্ঞান', weight: 15, mastery: 58, accuracy: 62, speed: 70, retention: 55 },
-  { id: 's_ict', examId: 'exam_bcs', name: 'ICT', nameBn: 'তথ্য ও যোগাযোগ প্রযুক্তি', weight: 15, mastery: 76, accuracy: 82, speed: 86, retention: 79 },
-  { id: 's_math', examId: 'exam_bcs', name: 'Mathematical Reasoning', nameBn: 'গাণিতিক যুক্তি', weight: 15, mastery: 54, accuracy: 58, speed: 64, retention: 50 },
+  { id: 's_ict', examId: 'exam_bcs', name: 'Computer & Information Technology', nameBn: 'কম্পিউটার ও তথ্য প্রযুক্তি', weight: 15, mastery: 76, accuracy: 82, speed: 86, retention: 79 },
+  { id: 's_math', examId: 'exam_bcs', name: 'Mathematical Reasoning', nameBn: 'গাণিতিক যুক্তি', weight: 20, mastery: 54, accuracy: 58, speed: 64, retention: 50 },
   { id: 's_mental', examId: 'exam_bcs', name: 'Mental Ability', nameBn: 'মানসিক দক্ষতা', weight: 15, mastery: 83, accuracy: 86, speed: 88, retention: 82 },
-  { id: 's_ethics', examId: 'exam_bcs', name: 'Ethics & Governance', nameBn: 'নৈতিকতা ও সুশাসন', weight: 15, mastery: 64, accuracy: 70, speed: 76, retention: 66 },
-  { id: 's_geo', examId: 'exam_bcs', name: 'Geography', nameBn: 'ভূগোল', weight: 15, mastery: 60, accuracy: 65, speed: 74, retention: 62 },
+  { id: 's_ethics', examId: 'exam_bcs', name: 'Ethics, Values & Good Governance', nameBn: 'নৈতিকতা, মূল্যবোধ ও সু-শাসন', weight: 15, mastery: 64, accuracy: 70, speed: 76, retention: 66 },
 ]
 
 export const topics: Topic[] = [

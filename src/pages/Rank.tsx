@@ -1,7 +1,6 @@
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Skeleton, Progress, Metric, Signal } from '@/components/ui'
-import { CosmicHorizon } from '@/components/horizon'
 
 export default function Rank() {
   const perf = useAsync(() => api.getPerformance())
@@ -21,14 +20,10 @@ export default function Rank() {
         <p className="mt-2 text-sm text-muted">Compete against your target, not your anxiety.</p>
       </div>
 
-      <Card className="relative h-44 overflow-hidden">
-        <CosmicHorizon variant="static" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent-hi">Current percentile</p>
-            <p className="mt-1 font-mono text-5xl font-bold text-gradient">{p.percentile}%</p>
-          </div>
-        </div>
+      <Card className="border-accent/20 bg-accent/[0.04] p-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent-hi">Current percentile</p>
+        <p className="mt-1 font-mono text-5xl font-semibold tracking-tight text-ink">{p.percentile}%</p>
+        <Progress value={p.percentile} className="mt-5 h-2" />
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -44,7 +39,7 @@ export default function Rank() {
         </div>
         <svg viewBox={`0 0 ${w} ${h}`} className="mt-4 h-32 w-full" preserveAspectRatio="none">
           {[0, 1, 2, 3].map((i) => (
-            <line key={i} x1="0" x2={w} y1={(h / 4) * i} y2={(h / 4) * i} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            <line key={i} x1="0" x2={w} y1={(h / 4) * i} y2={(h / 4) * i} stroke="var(--color-border-soft)" strokeWidth="1" />
           ))}
           <path d={`M${pts.map((x) => x.join(',')).join(' L')}`} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" />
           <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="4" fill="#8b5cf6" />

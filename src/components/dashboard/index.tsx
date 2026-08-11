@@ -10,7 +10,6 @@ import { cn } from '@/lib/cn'
 export function AIBriefingCard({ briefing }: { briefing: AIBriefing }) {
   return (
     <Card className="relative overflow-hidden p-5">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
       <div className="flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/25 bg-accent/[0.1] text-accent-hi">
           <Sparkles size={15} />
@@ -54,7 +53,7 @@ export function DailyMissionCard({ tasks }: { tasks: DailyTask[] }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="group flex items-center gap-3 rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/15"
+            className="group flex items-center gap-3 rounded-xl border border-border-soft bg-surface px-3 py-2.5 transition-colors hover:border-border"
           >
             <button aria-label={t.status === 'done' ? 'Mark incomplete' : 'Mark complete'}>
               {t.status === 'done' ? <CheckCircle2 size={18} className="text-success" /> : <Circle size={18} className="text-faint group-hover:text-accent-hi" />}
@@ -86,8 +85,7 @@ export function DailyMissionCard({ tasks }: { tasks: DailyTask[] }) {
 
 export function NextBestAction() {
   return (
-    <Card className="relative overflow-hidden border-accent/25 p-5 ring-glow">
-      <div className="pointer-events-none absolute -left-8 -bottom-16 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
+    <Card className="relative overflow-hidden border-accent/25 p-5">
       <Badge tone="accent">Next Best Action</Badge>
       <h3 className="mt-3 text-lg font-semibold text-ink">Complete 20 Percentage & Profit/Loss questions.</h3>
       <p className="mt-1.5 text-sm text-muted">

@@ -33,6 +33,7 @@ const Progress = lazy(() => import('@/pages/Progress'))
 const Rank = lazy(() => import('@/pages/Rank'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const ComingSoon = lazy(() => import('@/pages/ComingSoon'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 /** AI-flavoured loading fallback for code-split routes. */
@@ -110,6 +111,9 @@ export default function App() {
               <Route path="rank" element={<Rank />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="notices" element={<ComingSoon title="Noticeboard" description="Official exam notices, circulars and deadlines will live here. No live data is shown until it can be sourced and verified from official channels." action={{ to: '/exams', label: 'Browse exam information' }} />} />
+              <Route path="career" element={<ComingSoon title="Career OS" description="Your recruitment journey — Preliminary → Written → Viva → Medical → Verification → Gazetted Appointment — plus target-cadre preferences will live here." action={{ to: '/profile', label: 'View profile' }} />} />
+              <Route path="written-viva" element={<ComingSoon title="Written & Viva" description="AI-evaluated written answers and mock viva practice will live here once the evaluation backend is wired up." action={{ to: '/practice', label: 'Practice instead' }} />} />
             </Route>
           </Route>
 

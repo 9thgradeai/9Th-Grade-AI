@@ -4,7 +4,6 @@ import { ArrowLeft, Play, AlertTriangle } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { Card, Skeleton, Metric, Badge, Signal } from '@/components/ui'
-import { CosmicHorizon } from '@/components/horizon'
 
 const mistakes = [
   'Mislabels discount % as profit %',
@@ -47,11 +46,8 @@ export default function Topic() {
         <Metric label="Retention" value={`${t.retention}%`} tone="success" />
       </div>
 
-      <Card className="relative h-36 overflow-hidden">
-        <CosmicHorizon variant="static" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Signal tone="accent">Focus node · {t.name}</Signal>
-        </div>
+      <Card className="border-accent/20 bg-accent/[0.04] p-4">
+        <Signal tone="accent">Focus area · {t.name}</Signal>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -63,7 +59,7 @@ export default function Topic() {
           </div>
           <ul className="mt-4 space-y-2.5">
             {mistakes.map((m) => (
-              <li key={m} className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5 text-sm text-ink-soft">
+              <li key={m} className="flex items-start gap-2.5 rounded-xl border border-border-soft bg-surface px-3 py-2.5 text-sm text-ink-soft">
                 <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-warning" />
                 {m}
               </li>
@@ -80,7 +76,7 @@ export default function Topic() {
               ['Review 2', 'In 3 days', false],
               ['Review 3', 'In 8 days', false],
             ].map(([label, when, due]) => (
-              <div key={label as string} className="flex items-center justify-between rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5">
+              <div key={label as string} className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-3 py-2.5">
                 <span className="text-sm text-ink-soft">{label as string}</span>
                 <span className={`font-mono text-xs ${due ? 'text-danger' : 'text-muted'}`}>{when as string}</span>
               </div>
@@ -97,7 +93,7 @@ export default function Topic() {
           <Link to={`/practice?topic=${t.id}`} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-accent-hi to-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110">
             <Play size={15} /> Start targeted practice
           </Link>
-          <Link to="/memory" className="inline-flex items-center rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-white/5">
+          <Link to="/memory" className="inline-flex items-center rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface-2">
             View memory schedule
           </Link>
         </div>
@@ -115,7 +111,7 @@ export default function Topic() {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {q.options.map((o) => (
-                  <span key={o} className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs text-muted">{o}</span>
+                  <span key={o} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-muted">{o}</span>
                 ))}
               </div>
             </Card>

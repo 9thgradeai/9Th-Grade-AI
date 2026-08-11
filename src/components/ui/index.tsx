@@ -1,4 +1,13 @@
-import { type ReactNode, type ButtonHTMLAttributes, forwardRef, useEffect, useRef, useState } from 'react'
+import {
+  type ReactNode,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { Link } from 'react-router-dom'
 import { Crown, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -18,10 +27,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-b from-accent-hi to-accent text-white shadow-[0_1px_0_rgba(255,255,255,0.2)_inset,0_12px_32px_-12px_rgba(79,124,255,0.7)] hover:brightness-110 active:brightness-95',
-  secondary: 'bg-white/8 text-ink hover:bg-white/14 border border-white/10',
-  ghost: 'text-muted hover:text-ink hover:bg-white/6',
-  outline: 'border border-white/15 text-ink hover:bg-white/6 hover:border-white/25',
+    'bg-gradient-to-b from-accent-hi to-accent text-white shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] hover:brightness-110 active:brightness-95',
+  secondary: 'bg-surface-2 text-ink hover:bg-surface-3 border border-border',
+  ghost: 'text-muted hover:text-ink hover:bg-surface-2',
+  outline: 'border border-border text-ink hover:bg-surface-2',
   danger: 'bg-danger/15 text-danger hover:bg-danger/25 border border-danger/20',
 }
 
@@ -85,7 +94,7 @@ export function Card({ className, children, glow = false }: { className?: string
   return (
     <div
       className={cn(
-        'rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm',
+        'rounded-2xl border border-border bg-surface',
         glow && 'ring-glow',
         className,
       )}
@@ -106,7 +115,7 @@ const badgeTones: Record<BadgeTone, string> = {
   success: 'bg-success/12 text-success border-success/25',
   warning: 'bg-warning/12 text-warning border-warning/25',
   danger: 'bg-danger/12 text-danger border-danger/25',
-  muted: 'bg-white/6 text-muted border-white/10',
+  muted: 'bg-surface-2 text-muted border-border',
 }
 
 export function Badge({
@@ -167,7 +176,7 @@ export function Progress({
   }, [])
 
   return (
-    <div className={cn('relative h-1.5 w-full overflow-hidden rounded-full bg-white/8', className)} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
+    <div className={cn('relative h-1.5 w-full overflow-hidden rounded-full bg-surface-2', className)} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
       <div
         ref={barRef}
         className={cn('h-full rounded-full bg-gradient-to-r from-accent to-cyan', barClassName)}
@@ -240,7 +249,7 @@ export function Signal({ children, tone = 'accent', className }: { children: Rea
     muted: 'bg-faint',
   }
   return (
-    <span className={cn('inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-muted', className)}>
+    <span className={cn('inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] text-muted', className)}>
       <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse-soft', dot[tone])} />
       {children}
     </span>
@@ -250,7 +259,7 @@ export function Signal({ children, tone = 'accent', className }: { children: Rea
 /* ---------- Skeleton loader ---------- */
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-lg bg-white/[0.06]', className)} />
+  return <div className={cn('animate-pulse rounded-lg bg-surface-2', className)} />
 }
 
 /* ---------- Empty state ---------- */
@@ -267,7 +276,7 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/12 px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
       {icon && <div className="text-accent-hi">{icon}</div>}
       <h3 className="text-lg font-semibold text-ink">{title}</h3>
       <p className="max-w-sm text-sm text-muted">{body}</p>
@@ -323,6 +332,54 @@ export function ErrorState({ onRetry, onHome }: { onRetry?: () => void; onHome?:
         {onRetry && <Button variant="outline" onClick={onRetry}>Retry</Button>}
         {onHome && <LinkButton to="/dashboard" variant="ghost">Return to Dashboard</LinkButton>}
       </div>
+    </div>
+  )
+}
+
+/* ---------- Form primitives ---------- */
+
+export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      className={cn(
+        'h-10 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-ink placeholder:text-faint outline-none transition-colors focus:border-accent/60 focus:ring-2 focus:ring-accent/20',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        'w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint outline-none transition-colors focus:border-accent/60 focus:ring-2 focus:ring-accent/20',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+export function Field({
+  label,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: string
+  hint?: string
+  htmlFor?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-medium text-ink-soft">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-muted">{hint}</p>}
     </div>
   )
 }
