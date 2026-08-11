@@ -36,13 +36,16 @@ const app = new Hono()
 app.use('*', structuredLogger)
 app.use('*', compress())
 app.use('*', securityHeaders)
+// CORS: allow the frontend origin(s). `ALLOWED_ORIGINS` (comma-separated) lets
+// us permit BOTH the deployed frontend and localhost dev without a redeploy;
+// falls back to FRONTEND_URL, then the Vite dev origin. Brief §17: never `*`.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 app.use('*', cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true,
-  // Brief §17: in production, never use *
-  ...(process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL
-    ? { origin: process.env.FRONTEND_URL }
-    : {}),
 }))
 
 // Health / readiness check (Phase 6 monitoring)

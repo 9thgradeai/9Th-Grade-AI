@@ -1644,7 +1644,8 @@ rankRoutes.get("/me", async (c) => {
 import { Hono as Hono9 } from "hono";
 import { z as z5 } from "zod";
 var strategyRoutes = new Hono9();
-strategyRoutes.use("*", requireFeature("ai-strategy"));
+strategyRoutes.use("/strategy/*", requireFeature("ai-strategy"));
+strategyRoutes.use("/ai/*", requireFeature("ai-strategy"));
 strategyRoutes.use("/ai/*", rateLimit({
   windowMs: 6e4,
   max: 10,
@@ -2241,11 +2242,10 @@ var app = new Hono14();
 app.use("*", structuredLogger);
 app.use("*", compress());
 app.use("*", securityHeaders);
+var allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5173").split(",").map((s) => s.trim()).filter(Boolean);
 app.use("*", cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  credentials: true,
-  // Brief §17: in production, never use *
-  ...process.env.NODE_ENV === "production" && process.env.FRONTEND_URL ? { origin: process.env.FRONTEND_URL } : {}
+  origin: allowedOrigins,
+  credentials: true
 }));
 app.get("/api/health", async (c) => {
   let db = "ok";
@@ -2297,8 +2297,47 @@ app.onError((err, c) => {
 
 // scripts/vercel-entry.ts
 var runtime = "nodejs";
-var vercel_entry_default = handle(app);
+async function toWebRequest(req) {
+  const host = req.headers.host || "localhost";
+  const url = new URL(req.url || "/", `http://${host}`);
+  const hasBody = req.method !== "GET" && req.method !== "HEAD";
+  let body;
+  if (hasBody) {
+    body = await new Promise((resolve) => {
+      const chunks = [];
+      req.on("data", (c) => chunks.push(c));
+      req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8") || void 0));
+      req.on("error", () => resolve(void 0));
+    });
+  }
+  return new Request(url.toString(), {
+    method: req.method,
+    headers: req.headers,
+    body: hasBody ? body : void 0
+  });
+}
+async function writeNodeResponse(res, response) {
+  res.statusCode = response.status;
+  for (const [k, v] of response.headers.entries()) {
+    res.setHeader(k, v);
+  }
+  const buf = Buffer.from(await response.arrayBuffer());
+  res.end(buf);
+}
+var fetchHandler = handle(app);
+async function handler(req, res) {
+  if (req && typeof req.headers?.get === "function" && req instanceof Request) {
+    return fetchHandler(req);
+  }
+  const incoming = req;
+  const response = await fetchHandler(await toWebRequest(incoming));
+  if (res) {
+    await writeNodeResponse(res, response);
+    return;
+  }
+  return response;
+}
 export {
-  vercel_entry_default as default,
+  handler as default,
   runtime
 };
