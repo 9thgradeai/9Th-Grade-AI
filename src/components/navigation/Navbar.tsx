@@ -3,15 +3,36 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Logo } from './Logo'
-import { LinkButton } from '@/components/ui'
+import { TerminalButton } from '@/components/terminal'
 
 const links = [
-  { to: '/', label: 'Platform' },
-  { to: '/how-it-works', label: 'How It Works' },
-  { to: '/exams', label: 'Exams' },
-  { to: '/ai-engine', label: 'AI Engine' },
-  { to: '/progress', label: 'Analytics' },
+  { to: '/', label: 'platform' },
+  { to: '/how-it-works', label: 'how-it-works' },
+  { to: '/exams', label: 'exams' },
+  { to: '/ai-engine', label: 'ai-engine' },
+  { to: '/progress', label: 'analytics' },
 ]
+
+function TabLink({ to, label }: { to: string; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === '/'}
+      className={({ isActive }) =>
+        cn(
+          'rounded-md border px-2.5 py-1.5 font-mono text-[12px] transition-colors',
+          isActive
+            ? 'border-accent/40 bg-accent/[0.08] text-accent-hi'
+            : 'border-transparent text-muted hover:border-border hover:bg-surface-2 hover:text-ink',
+        )
+      }
+    >
+      <span className="text-faint">[</span>
+      ~/{label}
+      <span className="text-faint">]</span>
+    </NavLink>
+  )
+}
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -47,38 +68,25 @@ export function Navbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div
           className={cn(
-            'flex items-center justify-between rounded-2xl px-4 transition-all duration-300',
-            scrolled
-              ? 'glass-strong h-12 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.7)]'
-              : 'h-14 bg-transparent',
+            'flex items-center justify-between gap-3 rounded-lg border px-3 transition-all duration-300',
+            scrolled ? 'h-12 border-border bg-surface/90' : 'h-14 border-transparent bg-transparent',
           )}
         >
           <Logo />
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
             {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                className={({ isActive }) =>
-                  cn(
-                    'rounded-lg px-3 py-2 text-sm transition-colors',
-                    isActive ? 'text-ink' : 'text-muted hover:text-ink hover:bg-white/6',
-                  )
-                }
-              >
-                {l.label}
-              </NavLink>
+              <TabLink key={l.to} to={l.to} label={l.label} />
             ))}
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <LinkButton to="/login" variant="ghost" size="sm">
-              Sign In
-            </LinkButton>
-            <LinkButton to="/register" size="sm" iconRight={<ArrowRight size={14} />}>
-              Start Preparing
-            </LinkButton>
+            <TerminalButton to="/login" variant="ghost" className="h-8">
+              login
+            </TerminalButton>
+            <TerminalButton to="/register" iconRight={<ArrowRight size={14} />} className="h-8">
+              start
+            </TerminalButton>
           </div>
 
           <button
@@ -93,36 +101,38 @@ export function Navbar() {
       </div>
 
       {open && (
-          <div
-            className="g-enter glass-strong mx-4 mt-2 rounded-2xl p-3 lg:hidden"
-            style={{ '--enter-y': '-8px', '--enter-delay': '0s' } as CSSProperties}
-          >
-            <nav className="flex flex-col" aria-label="Mobile">
-              {links.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'rounded-lg px-3 py-3 text-[15px]',
-                      isActive ? 'text-ink bg-white/6' : 'text-muted hover:text-ink',
-                    )
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-            </nav>
-            <div className="mt-2 flex flex-col gap-2 border-t border-white/8 pt-3">
-              <LinkButton to="/login" variant="ghost" size="md">
-                Sign In
-              </LinkButton>
-              <LinkButton to="/register" size="md" iconRight={<ArrowRight size={15} />}>
-                Start Preparing
-              </LinkButton>
+        <div
+          className="g-enter mx-4 mt-2 rounded-lg border border-border bg-surface p-2 lg:hidden"
+          style={{ '--enter-y': '-8px', '--enter-delay': '0s' } as CSSProperties}
+        >
+          <nav className="flex flex-col" aria-label="Mobile">
+            {links.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-md px-3 py-2.5 font-mono text-sm',
+                    isActive ? 'text-accent-hi bg-accent/[0.08]' : 'text-muted hover:text-ink',
+                  )
+                }
+              >
+                <span className="text-faint">~/</span>
+                {l.label}
+              </NavLink>
+            ))}
+            <div className="mt-2 flex items-center gap-2 border-t border-border pt-2">
+              <TerminalButton to="/login" variant="ghost" className="h-9 flex-1">
+                login
+              </TerminalButton>
+              <TerminalButton to="/register" iconRight={<ArrowRight size={14} />} className="h-9 flex-1">
+                start
+              </TerminalButton>
             </div>
-          </div>
-        )}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

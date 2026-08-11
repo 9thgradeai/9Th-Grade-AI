@@ -682,3 +682,59 @@ body {
     transform: scale(1.15);
   }
 }
+
+/* ============================================================
+   Terminal Motion — additive utilities (dashboard-safe: these are
+   new, nothing existing is redefined).
+   ============================================================ */
+
+/* Static terminal backdrop: fine grid + faint radial, CSS-only, no canvas. */
+@utility term-bg {
+  background-color: var(--color-space-950);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79, 124, 255, 0.08), transparent 70%),
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 100% 100%, 44px 44px, 44px 44px;
+}
+
+@keyframes term-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Block cursor — the existing prefers-reduced-motion guard zeroes this. */
+@utility term-cursor {
+  animation: term-blink 1.15s steps(1) infinite;
+}
+
+/* Mono technical microcopy: labels, commands, status. */
+@utility term-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+@utility term-command {
+  font-family: var(--font-mono);
+}
+
+@utility term-prompt {
+  font-family: var(--font-mono);
+}
+
+/* Terminal page context-switch entrance (CSS-first; reduced-motion guard zeroes it). */
+@keyframes term-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility term-enter {
+  animation: term-enter 0.22s ease-out both;
+}

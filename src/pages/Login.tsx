@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import { CosmicHorizon } from '@/components/horizon'
 import { Logo } from '@/components/navigation/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
 import { ApiError } from '@/lib/client'
 import { safeRedirect } from '@/lib/redirect'
+import { TerminalPrompt, TerminalPageTransition } from '@/components/terminal'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
@@ -43,15 +43,18 @@ export default function Login() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <CosmicHorizon variant="ambient" />
-
+    <div className="term-bg relative flex min-h-screen items-center justify-center px-4">
+      <TerminalPageTransition>
       <div className="relative z-10 w-full max-w-md">
-        <div className="mb-8 flex justify-center">
+        <div className="mb-6 flex justify-center">
           <Logo />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-space-900/80 p-6 backdrop-blur-xl sm:p-8">
+        <div className="mb-3 flex justify-center">
+          <TerminalPrompt command="cd ~/login" cursor={false} className="text-center" />
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface p-6 sm:p-8">
           <h1 className="text-center text-2xl font-semibold tracking-tight text-ink">Welcome back</h1>
           <p className="mt-2 text-center text-sm text-muted">Sign in to your preparation command center.</p>
 
@@ -120,6 +123,7 @@ export default function Login() {
           </p>
         </div>
       </div>
+      </TerminalPageTransition>
     </div>
   )
 }

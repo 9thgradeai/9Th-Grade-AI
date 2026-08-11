@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Logo } from './Logo'
+import { TerminalPrompt, TerminalDivider, TerminalStatus } from '@/components/terminal'
 
 const columns = [
   {
-    title: 'Platform',
+    title: 'PLATFORM',
     links: [
       { label: 'How It Works', to: '/how-it-works' },
       { label: 'AI Engine', to: '/ai-engine' },
@@ -12,7 +13,7 @@ const columns = [
     ],
   },
   {
-    title: 'Exams',
+    title: 'EXAMS',
     links: [
       { label: 'BCS', to: '/exams/bcs' },
       { label: 'Bangladesh Bank AD', to: '/exams/bank-ad' },
@@ -21,7 +22,7 @@ const columns = [
     ],
   },
   {
-    title: 'Company',
+    title: 'COMPANY',
     links: [
       { label: 'About', to: '/about' },
       { label: 'Start Preparing', to: '/onboarding' },
@@ -31,8 +32,18 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="relative border-t border-white/8 bg-space-900/60">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <footer className="relative border-t border-border bg-surface/30">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+        {/* system status */}
+        <TerminalPrompt command="system.status" cursor={false} />
+        <div className="mt-3 grid max-w-sm gap-1.5">
+          <TerminalStatus label="status" value="operational" tone="text-success" />
+          <TerminalStatus label="version" value="1.2.0" />
+          <TerminalStatus label="environment" value="production" />
+        </div>
+
+        <TerminalDivider />
+
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
             <Logo />
@@ -40,14 +51,14 @@ export function Footer() {
               The AI operating system for competitive exam preparation in Bangladesh. Your preparation, engineered
               by intelligence.
             </p>
-            <div className="mt-5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-faint">
+            <div className="mt-5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-faint">
               <span>BCS</span>·<span>Bangladesh Bank AD</span>·<span>9th Grade</span>
             </div>
           </div>
 
           {columns.map((col) => (
             <div key={col.title}>
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">{col.title}</h4>
+              <h4 className="term-label text-[11px] text-faint">{col.title}</h4>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.label}>
@@ -61,10 +72,10 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/8 pt-6 sm:flex-row sm:items-center">
-          <p className="text-xs text-faint">© 2026 9Th-Grade AI. Built for Bangladesh's exam ecosystem.</p>
-          <p className="text-xs text-faint">
-            Official syllabi remain configurable and are not presented as unassailable fact.
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border pt-6 sm:flex-row sm:items-center">
+          <p className="font-mono text-xs text-faint">© 2026 9Th-Grade AI · system online</p>
+          <p className="font-mono text-xs text-faint">
+            official syllabi remain configurable · not presented as unassailable fact
           </p>
         </div>
       </div>

@@ -11,11 +11,10 @@ import { AdaptiveExamSection } from '@/components/landing/AdaptiveExamSection'
 import { MemoryEngineSection } from '@/components/landing/MemoryEngineSection'
 import { AnalyticsSection } from '@/components/landing/AnalyticsSection'
 import { FinalCTA } from '@/components/landing/FinalCTA'
-import { CosmicHorizon, CosmicSection } from '@/components/horizon'
+import { TerminalPrompt, TerminalDivider } from '@/components/terminal'
 
-/* Each landing section is memoized because the fixed Cosmic Horizon
-   background animates independently of React; the sections receive no
-   props, so memo is safe and keeps re-renders minimal. */
+/* Each landing section is memoized (they receive no props), keeping re-renders
+   minimal even under the fixed terminal background. */
 const HeroM = memo(Hero)
 const ProblemSectionM = memo(ProblemSection)
 const CoreLoopM = memo(CoreLoop)
@@ -29,26 +28,45 @@ const MemoryEngineSectionM = memo(MemoryEngineSection)
 const AnalyticsSectionM = memo(AnalyticsSection)
 const FinalCTAM = memo(FinalCTA)
 
-/* CosmicSection marks the narrative anchors; sections between them inherit
-   the nearest preceding phase, so the atmosphere evolves dark → structured
-   → luminous as the visitor moves down the page. */
+/** Terminal context marker — `$ cd ~/features` then an uppercase label. */
+function Context({ to, label }: { to: string; label: string }) {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 pt-16 sm:px-6">
+      <TerminalPrompt command={`cd ~/${to}`} cursor={false} />
+      <h2 className="mt-2 font-mono text-xs uppercase tracking-[0.24em] text-faint">{label}</h2>
+      <TerminalDivider className="my-4" />
+    </div>
+  )
+}
+
 export default function Landing() {
   return (
-    <div className="noise relative">
-      <CosmicHorizon variant="cinematic" />
+    <div className="noise term-bg relative min-h-screen">
       <div className="relative z-10">
-        <CosmicSection phase="hero"><HeroM /></CosmicSection>
+        <HeroM />
+
+        <Context to="features" label="adaptive learning infrastructure" />
         <ProblemSectionM />
         <CoreLoopM />
-        <CosmicSection phase="ai-engine"><AIEngineSectionM /></CosmicSection>
+
+        <Context to="ai-engine" label="the intelligence layer" />
+        <AIEngineSectionM />
         <EveryAnswerSectionM />
-        <CosmicSection phase="strategy"><RoadmapSectionM /></CosmicSection>
+
+        <Context to="workflow" label="a living plan, recalculated" />
+        <RoadmapSectionM />
         <SyllabusUniverseM />
         <ExamSelectorM />
-        <CosmicSection phase="adaptive-practice"><AdaptiveExamSectionM /></CosmicSection>
+
+        <Context to="adaptive-practice" label="practice that adapts to you" />
+        <AdaptiveExamSectionM />
         <MemoryEngineSectionM />
-        <CosmicSection phase="analytics"><AnalyticsSectionM /></CosmicSection>
-        <CosmicSection phase="mastery"><FinalCTAM /></CosmicSection>
+
+        <Context to="analytics" label="measure, then improve" />
+        <AnalyticsSectionM />
+
+        <Context to="launch" label="initialize your preparation" />
+        <FinalCTAM />
       </div>
     </div>
   )
