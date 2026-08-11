@@ -136,7 +136,7 @@ export default function Practice() {
           {starting ? 'Starting session…' : 'Begin Practice'}
         </Button>
         {startError && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger">
+          <div role="alert" className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger">
             <span>Couldn't start the session. {startError.message}</span>
             <button
               onClick={() => {

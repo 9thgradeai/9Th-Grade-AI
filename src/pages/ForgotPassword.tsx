@@ -52,7 +52,7 @@ export default function ForgotPassword() {
             <>
               <h1 className="text-center text-2xl font-semibold tracking-tight text-ink">Forgot your password?</h1>
               <p className="mt-2 text-center text-sm text-muted">Enter your email and we'll send a reset link.</p>
-              {error && <div className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">{error}</div>}
+              {error && <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">{error}</div>}
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label htmlFor="fp-email" className="mb-1.5 block text-xs font-medium text-faint">Email</label>

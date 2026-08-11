@@ -28,10 +28,10 @@ export function Hero() {
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <TerminalButton to="/register" iconRight={<ArrowRight size={14} />}>
+              <TerminalButton to="/register" iconRight={<ArrowRight size={14} />} className="h-11">
                 execute → register
               </TerminalButton>
-              <TerminalButton to="/exams" variant="ghost">
+              <TerminalButton to="/exams" variant="ghost" className="h-11">
                 explore.features
               </TerminalButton>
             </div>

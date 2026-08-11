@@ -56,7 +56,7 @@ export default function Register() {
           <p className="mt-2 text-center text-sm text-muted">Start building your AI preparation system.</p>
 
           {error && (
-            <div className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">
+            <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">
               {error}
             </div>
           )}

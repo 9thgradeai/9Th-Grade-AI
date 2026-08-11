@@ -59,7 +59,7 @@ export default function Login() {
           <p className="mt-2 text-center text-sm text-muted">Sign in to your preparation command center.</p>
 
           {error && (
-            <div className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">
+            <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">
               {error}
             </div>
           )}

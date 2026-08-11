@@ -21,10 +21,10 @@ export function FinalCTA() {
               should do next.
             </p>
             <div className="mx-auto flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <TerminalButton to="/onboarding" iconRight={<ArrowRight size={14} />}>
+              <TerminalButton to="/onboarding" iconRight={<ArrowRight size={14} />} className="h-11">
                 execute → initialize
               </TerminalButton>
-              <TerminalButton to="/exams" variant="ghost">
+              <TerminalButton to="/exams" variant="ghost" className="h-11">
                 explore.features
               </TerminalButton>
             </div>

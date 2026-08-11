@@ -57,7 +57,7 @@ export default function ResetPassword() {
             <>
               <h1 className="text-center text-2xl font-semibold tracking-tight text-ink">Set new password</h1>
               <p className="mt-2 text-center text-sm text-muted">Enter your new password below.</p>
-              {error && <div className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">{error}</div>}
+              {error && <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-center text-sm text-danger">{error}</div>}
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label htmlFor="rp-password" className="mb-1.5 block text-xs font-medium text-faint">New password</label>

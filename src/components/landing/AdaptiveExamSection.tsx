@@ -56,7 +56,7 @@ export function AdaptiveExamSection() {
 
               <Link
                 to="/onboarding"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent-hi transition-colors hover:text-ink"
+                className="mt-5 inline-flex items-center gap-2 py-2 text-sm font-medium text-accent-hi transition-colors hover:text-ink"
               >
                 Start Targeted Practice <ArrowRight size={15} />
               </Link>

@@ -20,7 +20,7 @@ function TabLink({ to, label }: { to: string; label: string }) {
       end={to === '/'}
       className={({ isActive }) =>
         cn(
-          'rounded-md border px-2.5 py-1.5 font-mono text-[12px] transition-colors',
+          'flex min-h-10 items-center rounded-md border px-2.5 py-1.5 font-mono text-[12px] transition-colors',
           isActive
             ? 'border-accent/40 bg-accent/[0.08] text-accent-hi'
             : 'border-transparent text-muted hover:border-border hover:bg-surface-2 hover:text-ink',
@@ -81,10 +81,10 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <TerminalButton to="/login" variant="ghost" className="h-8">
+            <TerminalButton to="/login" variant="ghost" className="h-10">
               login
             </TerminalButton>
-            <TerminalButton to="/register" iconRight={<ArrowRight size={14} />} className="h-8">
+            <TerminalButton to="/register" iconRight={<ArrowRight size={14} />} className="h-10">
               start
             </TerminalButton>
           </div>
