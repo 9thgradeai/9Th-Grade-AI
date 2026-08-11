@@ -37,6 +37,9 @@ export default function Settings() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-ink">Settings</h1>
         <p className="mt-2 text-sm text-muted">Tune your preparation system.</p>
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/[0.06] px-3 py-1 text-xs font-medium text-accent-hi">
+          Preview — these preferences aren't saved to your account yet (auto-save coming soon).
+        </p>
       </div>
 
       <Card className="p-6">

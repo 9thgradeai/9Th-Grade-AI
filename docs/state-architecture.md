@@ -41,6 +41,26 @@ so there is no "API → store → component copy" chain to desync.
    both locally and server-side, the backend wins and the local copy is merged
    read-only at the service boundary (`api.getRevisionItems()`).
 
+## Async state contract — every data screen must render all of these
+
+Loading / Empty / Success / Error / Retry / Offline. Use the shared primitives;
+never let a region collapse to nothing or leave a submit in a dead state.
+
+- **Data regions** → wrap in `AsyncGate` (from `src/components/ui/AsyncGate.tsx`):
+  it renders Offline → Loading → Error(with Retry) → Empty → Success(children)
+  from a `useAsync` result. Prefer it over ad-hoc `{x.loading ? … : x.data ? … : null}`.
+- **Offline** → the global `OfflineBanner` (mounted in `main.tsx`) covers every
+  screen via `useOnline`; data regions additionally pass `offline={!online}`.
+- **Submits** → use `useSubmit` (`src/lib/useSubmit.ts`). It hard-guards
+  re-entrancy (a ref, not just `disabled`) so a slow API can never turn N
+  clicks into N requests, and it surfaces an explicit error + Retry so a submit
+  can never silently "do nothing". Wire the button as `disabled={inFlight}` and
+  render `error` with a retry action.
+
+Rule: a `useAsync`/`useSubmit` call must reach every one of its terminal states
+(loading, success, error) and reset out of them — no stuck spinners, no
+silently-empty regions, no re-entrant submits.
+
 ## Adding new state
 
 - Backend/remote data → add an `api.ts` method + consume via `useAsync`.

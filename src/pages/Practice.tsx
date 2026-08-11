@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Timer, Cpu } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
+import { useOnline } from '@/lib/useOnline'
+import { useSubmit } from '@/lib/useSubmit'
 import { api } from '@/lib/api'
 import { QuestionRunner } from '@/components/exam/QuestionRunner'
 import { Button, Card, Badge, Skeleton } from '@/components/ui'
@@ -23,14 +25,16 @@ export default function Practice() {
   const [timed, setTimed] = useState(true)
   const [adaptive, setAdaptive] = useState(true)
   const [session, setSession] = useState<{ questions: Question[] } | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  async function start() {
-    setLoading(true)
+  const online = useOnline()
+  const { run: runStart, inFlight: starting, error: startError, clearError: clearStartError } = useSubmit(async () => {
     const questions = await api.listQuestions(topicId, count)
     await new Promise((r) => setTimeout(r, 500))
     setSession({ questions })
-    setLoading(false)
+  })
+
+  async function start() {
+    if (!online) return
+    await runStart()
   }
 
   function onFinish(attempts: QuestionAttempt[]) {
@@ -118,7 +122,7 @@ export default function Practice() {
         {/* toggles */}
         <div className="mt-6 grid gap-2.5">
           <Toggle active={timed} onClick={() => setTimed((v) => !v)} icon={<Timer size={16} />} title="Timed" desc="Track response time per question" />
-          <Toggle active={adaptive} onClick={() => setAdaptive((v) => !v)} icon={<Cpu size={16} />} title="AI Adaptive mode" desc="System picks the next question from your model" />
+          <Toggle active={adaptive} onClick={() => setAdaptive((v) => !v)} icon={<Cpu size={16} />} title="AI Adaptive mode (preview)" desc="Illustrative for now — true adaptive question selection is coming soon" />
         </div>
 
         {adaptive && (
@@ -128,13 +132,27 @@ export default function Practice() {
           </div>
         )}
 
-        <Button size="lg" className="mt-6 w-full" onClick={start} disabled={loading} icon={<Play size={16} />}>
-          {loading ? 'Starting session…' : 'Begin Practice'}
+        <Button size="lg" className="mt-6 w-full" onClick={start} disabled={starting || !online} icon={<Play size={16} />}>
+          {starting ? 'Starting session…' : 'Begin Practice'}
         </Button>
+        {startError && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger">
+            <span>Couldn't start the session. {startError.message}</span>
+            <button
+              onClick={() => {
+                clearStartError()
+                void runStart()
+              }}
+              className="shrink-0 font-medium underline underline-offset-2"
+            >
+              Retry
+            </button>
+          </div>
+        )}
       </Card>
 
       <AnimatePresence>
-        {loading && (
+        {starting && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-6">
             <Card className="p-5">
               <Skeleton className="h-4 w-1/2" />

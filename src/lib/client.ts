@@ -17,6 +17,8 @@
        on idempotent GETs (never for mutations)
    ============================================================ */
 
+import { captureApiError } from '@/lib/sentry'
+
 const TOKEN_KEY = 'grade.token'
 const DEFAULT_TIMEOUT_MS = 10_000
 const GET_RETRIES = 2
@@ -149,6 +151,13 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
       }
       const err = new ApiError(res.status, message, serverRid ?? rid, code)
 
+      /* Capture genuine server failures to Sentry with correlation tags.
+         Routine 4xx (validation/auth) are handled by the UI and 401s by the
+         refresh/logout flow — only 5xx here. Network errors captured below. */
+      if (res.status >= 500) {
+        captureApiError(err, { path, method, status: res.status, requestId: rid })
+      }
+
       /* 401: renew the session once, then retry; otherwise clear auth. */
       if (res.status === 401) {
         const isAuthCall = path.startsWith('/auth/')
@@ -168,7 +177,9 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
   } catch (e) {
     if (e instanceof ApiError) throw e
     // AbortError or fetch TypeError → network / timeout.
-    throw new ApiError(0, controller.signal.aborted ? 'Request timed out' : 'Network error', rid)
+    const netErr = new ApiError(0, controller.signal.aborted ? 'Request timed out' : 'Network error', rid)
+    captureApiError(netErr, { path, method, status: 0, requestId: rid })
+    throw netErr
   } finally {
     clearTimeout(timeout)
   }

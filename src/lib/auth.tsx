@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { User } from '@/lib/types'
 import { client, setToken, isNetworkError, ApiError } from '@/lib/client'
 import { clearApiCache } from '@/lib/api'
+import { setSentryUser, captureApiError } from '@/lib/sentry'
 
 /* ============================================================
    Auth store — production-grade state machine.
@@ -80,12 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setAuthenticated = useCallback((u: UserPayload) => {
     setUser(toUser(u))
+    setSentryUser(u.id)
     setState('AUTHENTICATED')
   }, [])
 
   const setUnauthenticated = useCallback(() => {
     setToken(null)
     setUser(null)
+    setSentryUser(null)
     clearApiCache()
     setState('UNAUTHENTICATED')
   }, [])
@@ -122,20 +125,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* --- Auth methods: NEVER fall back to mock (brief §2/§13) --- */
   const login = useCallback(async (email: string, password: string) => {
-    const { user: u, token } = await client.post<SessionResponse>('/auth/login', {
-      email,
-      password,
-    })
-    setToken(token)
-    setAuthenticated(u)
-    return toUser(u)
+    try {
+      const { user: u, token } = await client.post<SessionResponse>('/auth/login', {
+        email,
+        password,
+      })
+      setToken(token)
+      setAuthenticated(u)
+      return toUser(u)
+    } catch (e) {
+      captureApiError(e, {
+        path: '/auth/login',
+        method: 'POST',
+        status: e instanceof ApiError ? e.status : undefined,
+        requestId: e instanceof ApiError ? e.requestId : undefined,
+      })
+      throw e
+    }
   }, [setAuthenticated])
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    const { user: u, token } = await client.post<SessionResponse>('/auth/register', payload)
-    setToken(token)
-    setAuthenticated(u)
-    return toUser(u)
+    try {
+      const { user: u, token } = await client.post<SessionResponse>('/auth/register', payload)
+      setToken(token)
+      setAuthenticated(u)
+      return toUser(u)
+    } catch (e) {
+      captureApiError(e, {
+        path: '/auth/register',
+        method: 'POST',
+        status: e instanceof ApiError ? e.status : undefined,
+        requestId: e instanceof ApiError ? e.requestId : undefined,
+      })
+      throw e
+    }
   }, [setAuthenticated])
 
   const logout = useCallback(async () => {

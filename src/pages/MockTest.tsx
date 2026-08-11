@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { ArrowLeft, Clock, Sparkles } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { QuestionRunner } from '@/components/exam/QuestionRunner'
@@ -13,13 +13,19 @@ export default function MockTest() {
   const navigate = useNavigate()
   const [started, setStarted] = useState(false)
   const [questions, setQuestions] = useState<Question[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const { data: pref } = useAsync(() => api.getPerformance())
 
   useEffect(() => {
     let active = true
-    api.listQuestions('__mock__', 10).then((qs) => {
-      if (active) setQuestions(qs)
-    })
+    api
+      .listQuestions('__mock__', 10)
+      .then((qs) => {
+        if (active) setQuestions(qs)
+      })
+      .catch(() => {
+        if (active) setLoadError(true)
+      })
     return () => {
       active = false
     }
@@ -65,7 +71,13 @@ export default function MockTest() {
           for review. No universe animations — just focus.
         </p>
 
-        {questions ? (
+        <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/[0.06] px-3 py-1 text-xs font-medium text-accent-hi">
+          <Sparkles size={12} /> Preview · demo session — sample questions and illustrative scoring. Server-graded mock tests are coming soon.
+        </div>
+
+        {loadError ? (
+          <div className="mt-8 text-sm text-muted">The demo session isn't available right now. Full mock-tests are coming soon.</div>
+        ) : questions ? (
           <div className="mt-8 grid grid-cols-3 gap-3">
             {[
               ['Questions', String(questions.length)],

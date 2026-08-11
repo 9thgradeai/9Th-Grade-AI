@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { reportError } from '@/lib/sentry'
 
 interface Props {
   children: ReactNode
@@ -22,6 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary] Route render error:', error, info)
+    reportError(error, { boundary: 'App', componentStack: info.componentStack })
   }
 
   render() {

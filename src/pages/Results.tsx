@@ -14,6 +14,7 @@ export default function Results() {
   const saved = getSavedResult()
   const sample = useAsync(() => api.getSampleResult())
   const r = saved ?? sample.data
+  const isDemo = !saved
   const [savedToMemory, setSavedToMemory] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -62,6 +63,12 @@ export default function Results() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
+      {isDemo && (
+        <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/[0.06] px-3 py-1 text-xs font-medium text-accent-hi">
+          <Sparkles size={12} /> Demo result — illustrative sample. Complete a practice or mock session to see your real score here.
+        </div>
+      )}
+
       <div className="text-center">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}>
           <Signal tone="accent">Performance Diagnosis</Signal>

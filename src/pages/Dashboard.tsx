@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
+import { useOnline } from '@/lib/useOnline'
 import { api } from '@/lib/api'
 import { isFeatureLocked } from '@/lib/client'
-import { Card, Skeleton, Signal } from '@/components/ui'
+import { Card, Signal } from '@/components/ui'
+import { AsyncGate } from '@/components/ui/AsyncGate'
 import { AIBriefingCard } from '@/components/dashboard'
 import {
   ExamContextHeader,
@@ -31,9 +33,9 @@ export default function Dashboard() {
   const subjects = useAsync(() => api.listSubjects())
   const revision = useAsync(() => api.getRevisionItems())
   const recommendations = useAsync(() => api.getAIRecommendations())
+  const online = useOnline()
 
   const examName = roadmap.data?.examName ?? BCS_PRELIMINARY.name
-  const daysRemaining = roadmap.data?.daysRemaining
   const memoryDue = revision.data?.filter((i) => i.overdue).length ?? 0
 
   return (
@@ -50,56 +52,80 @@ export default function Dashboard() {
       </div>
 
       {/* Exam context */}
-      {roadmap.loading ? (
-        <Skeleton className="h-24 rounded-2xl" />
-      ) : (
-        <ExamContextHeader examName={examName} daysRemaining={daysRemaining} readiness={perf.data?.examReadiness} />
-      )}
+      <AsyncGate loading={roadmap.loading} error={roadmap.error} data={roadmap.data} onRetry={roadmap.reload} offline={!online}>
+        {(rd) => <ExamContextHeader examName={rd.examName} daysRemaining={rd.daysRemaining} readiness={perf.data?.examReadiness} />}
+      </AsyncGate>
 
       {/* Core performance summary */}
-      {perf.data ? <CoreSummary perf={perf.data} /> : <Skeleton className="h-32 rounded-2xl" />}
+      <AsyncGate loading={perf.loading} error={perf.error} data={perf.data} onRetry={perf.reload} offline={!online}>
+        {(p) => <CoreSummary perf={p} />}
+      </AsyncGate>
 
       {/* Mission + AI briefing */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          {tasks.loading ? (
-            <Skeleton className="h-80 rounded-2xl" />
-          ) : tasks.data ? (
-            <MissionCard items={buildMission(tasks.data, subjects.data ?? [])} memoryDue={memoryDue} />
-          ) : null}
+          <AsyncGate
+            loading={tasks.loading}
+            error={tasks.error}
+            data={tasks.data}
+            onRetry={tasks.reload}
+            offline={!online}
+            isEmpty={!tasks.data?.length}
+            emptyTitle="No tasks yet"
+            emptyBody="Your daily plan will appear here once you set your exam date and study time."
+          >
+            {(tasksData) => <MissionCard items={buildMission(tasksData, subjects.data ?? [])} memoryDue={memoryDue} />}
+          </AsyncGate>
         </div>
 
         {/* AI briefing / strategy */}
         <div className="space-y-4">
-          {briefing.loading ? (
-            <Skeleton className="h-48 rounded-2xl" />
-          ) : isFeatureLocked(briefing.errorObject) ? (
+          {isFeatureLocked(briefing.errorObject) ? (
             <Card className="p-5">
               <Signal tone="accent">AI Briefing</Signal>
               <p className="mt-3 text-sm text-muted">Upgrade to unlock your daily AI briefing.</p>
             </Card>
-          ) : briefing.data ? (
-            <AIBriefingCard briefing={briefing.data} />
-          ) : null}
+          ) : (
+            <AsyncGate loading={briefing.loading} error={briefing.error} data={briefing.data} onRetry={briefing.reload} offline={!online}>
+              {(b) => <AIBriefingCard briefing={b} />}
+            </AsyncGate>
+          )}
         </div>
       </div>
 
       {/* Subjects + recommendations */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          {subjects.loading ? (
-            <Skeleton className="h-96 rounded-2xl" />
-          ) : subjects.data ? (
-            <SubjectPerformanceList subjects={subjects.data} totalMarks={TOTAL_MARKS} />
-          ) : null}
+          <AsyncGate
+            loading={subjects.loading}
+            error={subjects.error}
+            data={subjects.data}
+            onRetry={subjects.reload}
+            offline={!online}
+            isEmpty={!subjects.data?.length}
+            emptyTitle="No subjects yet"
+            emptyBody="Subject performance will appear once you've practiced."
+          >
+            {(subs) => <SubjectPerformanceList subjects={subs} totalMarks={TOTAL_MARKS} />}
+          </AsyncGate>
         </div>
 
         {/* AI recommendations */}
         <div className="space-y-3">
-          {recommendations.data ? (
-            <>
+          <AsyncGate
+            loading={recommendations.loading}
+            error={recommendations.error}
+            data={recommendations.data}
+            onRetry={recommendations.reload}
+            offline={!online}
+            isEmpty={!recommendations.data?.length}
+            emptyTitle="No recommendations yet"
+            emptyBody="AI recommendations will appear once you have some practice data."
+          >
+            {(recs) => (
+              <>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-faint">Recommended next</h2>
-              {recommendations.data.slice(0, 3).map((r, i) => (
+              {recs.slice(0, 3).map((r, i) => (
                 <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
                   <Card className="flex flex-col gap-2 p-4">
                     <div className="flex items-center gap-2">
@@ -121,8 +147,9 @@ export default function Dashboard() {
                   </Card>
                 </motion.div>
               ))}
-            </>
-          ) : null}
+              </>
+            )}
+          </AsyncGate>
         </div>
       </div>
     </div>
