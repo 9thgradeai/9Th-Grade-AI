@@ -46,12 +46,12 @@ async function withLoading<T>(value: T, ms?: number): Promise<T> {
  * paywall, which must surface as an upgrade prompt) is rethrown so the UI
  * shows a real error/empty state instead of fabricating data.
  */
-async function fromBackend<T>(real: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
+async function fromBackend<T>(real: () => Promise<T>, fallback?: () => Promise<T>): Promise<T> {
   try {
     return await real()
   } catch (e) {
     if (isFeatureLocked(e)) throw e
-    if (import.meta.env.DEV) return fallback()
+    if (import.meta.env.DEV && fallback) return fallback()
     throw e
   }
 }
@@ -65,7 +65,7 @@ const valueCache = new Map<string, { value: unknown; expiresAt: number }>()
  * `ttlMs`. `ttlMs` is used only for static catalog reads. Never caches
  * rejections.
  */
-function memo<T>(key: string, real: () => Promise<T>, fallback: () => Promise<T>, ttlMs?: number): Promise<T> {
+function memo<T>(key: string, real: () => Promise<T>, fallback?: () => Promise<T>, ttlMs?: number): Promise<T> {
   if (ttlMs) {
     const c = valueCache.get(key)
     if (c && c.expiresAt > Date.now()) return Promise.resolve(c.value as T)
@@ -329,7 +329,6 @@ export const api = {
     return memo(
       'listExams',
       () => client.get<RawExam[]>('/exams').then((list) => list.map(toExam)),
-      () => withLoading(data.exams),
       TTL_CATALOG,
     )
   },
@@ -338,7 +337,6 @@ export const api = {
     return memo(
       `getExam:${slug}`,
       () => client.get<RawExam>(`/exams/${slug}`).then(toExam),
-      () => withLoading(data.exams.find((e) => e.slug === slug)),
       TTL_CATALOG,
     )
   },
@@ -347,7 +345,6 @@ export const api = {
     return memo(
       'listSubjects',
       () => client.get<RawSubject[]>('/exams/subjects').then((list) => list.map(toSubject)),
-      () => withLoading(_examId ? data.subjects.filter((s) => s.examId === _examId) : data.subjects),
       TTL_CATALOG,
     )
   },
@@ -356,7 +353,6 @@ export const api = {
     return memo(
       `getSubject:${id}`,
       () => client.get<RawSubject>(`/exams/subjects/${id}`).then(toSubject),
-      () => withLoading(data.subjects.find((s) => s.id === id)),
       TTL_CATALOG,
     )
   },
@@ -368,7 +364,6 @@ export const api = {
         client
           .get<RawTopic[]>(`/exams/topics?subjectId=${encodeURIComponent(subjectId)}`)
           .then((list) => list.map(toTopic)),
-      () => withLoading(data.topics.filter((t) => t.subjectId === subjectId)),
       TTL_CATALOG,
     )
   },
@@ -389,11 +384,6 @@ export const api = {
         client
           .get<{ questions: RawQuestion[] }>(`/questions/${encodeURIComponent(topicId)}?limit=${count}`)
           .then((r) => r.questions.map(toQuestion)),
-      () => {
-        const bank = data.questions.filter((q) => q.topicId === topicId)
-        const pool = bank.length ? bank : data.questions
-        return withLoading(pool.slice(0, count), 320)
-      },
       TTL_QUESTIONS,
     )
   },
@@ -405,7 +395,7 @@ export const api = {
         client
           .get<{ performance: RawPerformance }>('/performance')
           .then((r) => toPerformance(r.performance)),
-      () => withLoading(data.performance),
+      TTL_CATALOG,
     )
   },
 
@@ -426,7 +416,7 @@ export const api = {
             phases: r.roadmap.phases.map(toPhase),
             priorities: r.roadmap.priorities,
           })),
-      () => withLoading(data.roadmap),
+      TTL_CATALOG,
     )
   },
 
@@ -434,7 +424,7 @@ export const api = {
     return memo(
       'getDailyTasks',
       () => client.get<{ tasks: Parameters<typeof toDailyTask>[0][] }>('/dashboard/daily-tasks').then((r) => r.tasks.map(toDailyTask)),
-      () => withLoading(data.dailyTasks),
+      TTL_CATALOG,
     )
   },
 
@@ -446,7 +436,7 @@ export const api = {
         client
           .get<{ items: { id: string; topic: string; subject: string; memoryStrength: number; lastReviewed: string; nextReview: string; overdue: boolean }[] }>('/revision/items')
           .then((r) => withLocal(r.items.map(toRevisionItem))),
-      () => withLoading(withLocal(data.revisionItems)),
+      TTL_CATALOG,
     )
   },
 
@@ -457,7 +447,7 @@ export const api = {
         client
           .get<{ id?: string; title?: string; items?: string[] }>('/ai/briefing')
           .then((r) => ({ id: r.id ?? 'briefing', title: r.title ?? '', items: r.items ?? [] })),
-      () => withLoading(data.aiBriefing),
+      TTL_CATALOG,
     )
   },
 
@@ -468,36 +458,7 @@ export const api = {
         client
           .get<{ recommendations: Parameters<typeof toAIRecommendation>[0][] }>('/ai/recommendations')
           .then((r) => r.recommendations.map(toAIRecommendation)),
-      () => {
-        const recommendations: AIRecommendation[] = [
-          {
-            id: 'ai_1',
-            kind: 'action',
-            severity: 'high',
-            title: 'Your next best action',
-            body: 'Complete 20 Percentage & Profit/Loss questions. Your accuracy there (51%) is holding back Mathematics.',
-            actionLabel: 'Start now',
-            actionRoute: '/practice?topic=t_profit',
-          },
-          {
-            id: 'ai_2',
-            kind: 'diagnosis',
-            severity: 'medium',
-            title: 'Weakness detected',
-            body: 'International Affairs shows a 14-point retention gap. The UN System topic is due for review today.',
-            actionLabel: 'Open topic',
-            actionRoute: '/topics/t_un',
-          },
-          {
-            id: 'ai_3',
-            kind: 'strategy',
-            severity: 'low',
-            title: 'Plan adjusted',
-            body: 'Your daily plan now allocates an extra 20 minutes to Mathematics to stay on trajectory.',
-          },
-        ]
-        return withLoading(recommendations)
-      },
+      TTL_CATALOG,
     )
   },
 

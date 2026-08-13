@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "jetro": {
+      "command": "/Users/farhankabir/.jetro/runtime/node-darwin-arm64",
+      "args": [
+        "/Users/farhankabir/.jetro/mcp-server/index.js"
+      ],
+      "env": {
+        "JET_WORKSPACE": "/Users/farhankabir/grade",
+        "JET_API_URL": "https://api.jetro.ai",
+        "JET_JWT": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3YzQ1NTQ4NTU1NTYxOTYwZjQ5MWQ1MDYzOWU1NTY1N2IyMTJhYmMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vamV0cm8tY2RhZWYiLCJhdWQiOiJqZXRyby1jZGFlZiIsImF1dGhfdGltZSI6MTc4NjAyMTk4OSwidXNlcl9pZCI6IldtZUhlQkpwb2JXQVpTYXgwaGZGVTNpY1o5cDIiLCJzdWIiOiJXbWVIZUJKcG9iV0FaU2F4MGhmRlUzaWNaOXAyIiwiaWF0IjoxNzg2NjU2MDgwLCJleHAiOjE3ODY2NTk2ODAsImVtYWlsIjoiOXRoZ3JhZGVhaUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyI5dGhncmFkZWFpQGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6InBhc3N3b3JkIn19.GJATbKpUwz6V2fKcSoi1ADrMq9ZaOiQG1eqTxrLuFqsBamvFrYEmSeiyYTl-Clnf7JEnCAtIIRzTIt6Kd2hXLylX4hQfxEsRq_XwZmzsWsB4lyly_SFUxWDtNcYbu1mokXHToY__xd8NscETavbaMMhYNSuHRdgvvZm9zFaM-CgVAqghzs6hrfRioyPZv1PvxSIHYc28cb0cIIMjYuI7d1uupZZdE-IKWCK6f8WEduQeqd3bJwgtEhannBCqUnc7P0yW3BRZAKsDiRib05Hn_t8VqjaJIQS76Ej0Fvh9j0jal7GWDsZR382BAPrZxwXz6ZEXUZOZWVebsW_CnqnwiA",
+        "PATH": "/Users/farhankabir/.jetro/runtime:/Users/farhankabir/.antigravity-ide/antigravity-ide/bin:/Users/farhankabir/.antigravity-ide/antigravity-ide/bin:/Users/farhankabir/.antigravity-ide/antigravity-ide/bin:/Users/farhankabir/.antigravity-ide/antigravity-ide/bin:/Users/farhankabir/.antigravity-ide/antigravity-ide/bin:/Users/farhankabir/Library/Python/3.12/bin:/Users/farhankabir/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/farhankabir/.nvm/versions/node/v22.23.2/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pkg/env/active/bin:/opt/pmk/env/global/bin"
+      }
+    }
+  }
+}

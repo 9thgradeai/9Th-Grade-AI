@@ -20,7 +20,7 @@ export default function Practice() {
   const subjects = useAsync(() => api.listSubjects())
   const topics = useAsync(() => api.listTopics(presetTopic ?? subjects.data?.[0]?.id ?? ''), [presetTopic, subjects.data])
 
-  const [topicId, setTopicId] = useState(presetTopic ?? 't_profit')
+  const [topicId, setTopicId] = useState(presetTopic || '')
   const [count, setCount] = useState(5)
   const [timed, setTimed] = useState(true)
   const [adaptive, setAdaptive] = useState(true)
