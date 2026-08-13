@@ -103,7 +103,10 @@ testRoutes.post('/build', async (c) => {
   // Sample the question pool for this scope.
   const pool = await prisma.question.findMany({
     where: scopeWhere,
-    include: { topic: { include: { subject: true } } },
+    include: {
+      topic: { include: { subject: true } },
+      content: { select: { correctIndex: true } },
+    },
   })
   if (pool.length === 0) {
     return c.json({ error: 'No questions available for this scope' }, 404)
@@ -206,10 +209,13 @@ testRoutes.post('/:id/submit', async (c) => {
     return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
   }
 
-  // Load the test's questions enriched with topic/subject.
+  // Load the test's questions enriched with topic/subject AND content (for correctIndex).
   const questions = await prisma.question.findMany({
     where: { id: { in: test.questionIds } },
-    include: { topic: { include: { subject: true } } },
+    include: {
+      topic: { include: { subject: true } },
+      content: { select: { correctIndex: true } },
+    },
   })
 
   const byId = new Map(parsed.data.attempts.map((a) => [a.questionId, a]))
@@ -228,11 +234,12 @@ testRoutes.post('/:id/submit', async (c) => {
     const a = byId.get(gq.questionId)
     const selectedIndex = a?.selectedIndex ?? null
     const q = questions.find((x) => x.id === gq.questionId)!
+    const correctIndex = q.content?.correctIndex ?? 0
     return {
       testId: test.id,
       questionId: gq.questionId,
       selectedIndex,
-      correct: selectedIndex != null && selectedIndex === q.correctIndex,
+      correct: selectedIndex != null && selectedIndex === correctIndex,
       timeSpentSeconds: a?.timeSpentSeconds ?? 0,
       confidence: a?.confidence ?? 3,
     }

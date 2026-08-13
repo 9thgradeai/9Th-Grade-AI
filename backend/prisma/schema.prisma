@@ -104,10 +104,14 @@ model Subject {
   @@index([examId])
 }
 
+// ─── Enhanced Hierarchy: Topic → SubTopic ──────────────────
+
 model Topic {
   id         String  @id @default(cuid())
   subjectId  String
   name       String
+  nameBn     String?
+  sortOrder  Int     @default(0)
   mastery    Int     @default(0)
   accuracy   Int     @default(0)
   speed      Int     @default(0)
@@ -116,11 +120,25 @@ model Topic {
   reviewDue  Int?
 
   subject    Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subTopics  SubTopic[]
   questions  Question[]
   userTopics UserTopic[]
   revisionItems RevisionItem[]
 
   @@index([subjectId])
+}
+
+model SubTopic {
+  id        String  @id @default(cuid())
+  topicId   String
+  name      String
+  nameBn    String?
+  sortOrder Int     @default(0)
+
+  topic     Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@index([topicId])
 }
 
 // ─── User Progress (per-user subject/topic state) ──────────
@@ -164,23 +182,128 @@ model UserTopic {
 // ─── Questions & Tests ─────────────────────────────────────
 
 model Question {
-  id            String @id @default(cuid())
-  topicId       String
-  prompt        String
-  promptBn      String?
-  options       String[] // JSON array of options
-  optionsBn     String[] @default([])
-  correctIndex  Int
-  explanation   String
-  difficulty    Int    @default(2) // 1-5
-  targetSeconds Int    @default(40)
-  tags          String[]
+  id               String   @id @default(cuid())
+  subTopicId       String?
+  topicId          String   // Keep for backward compatibility
 
-  topic    Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  attempts QuestionAttempt[]
+  // Content (normalized)
+  content          QuestionContent?
+
+  // Metadata
+  questionType     String   @default("mcq-single") // 'mcq-single' | 'mcq-multiple' | 'fill-blank'
+  difficulty       Int      @default(2)            // 1-5, AI-adjustable
+  targetSeconds    Int      @default(40)
+
+  // Classification
+  tags             String[]
+  bloomLevel       String?                          // 'remember' | 'understand' | 'apply' | 'analyze'
+
+  // Quality & Status
+  status           String   @default("draft")       // 'draft' | 'review' | 'approved' | 'published' | 'archived'
+  verificationStatus String @default("unverified")  // 'unverified' | 'verified' | 'disputed'
+
+  // Deduplication
+  contentHash      String?                          // SHA-256 of normalized prompt
+  canonicalId      String?                          // Points to canonical if duplicate
+  isCanonical      Boolean  @default(true)
+
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  publishedAt      DateTime?
+
+  // Relations
+  topic            Topic                  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subTopic         SubTopic?              @relation(fields: [subTopicId], references: [id], onDelete: SetNull)
+  source           QuestionSource?
+  versions         QuestionVersion[]
+  stats            QuestionStats?
+  currentAffairs   CurrentAffairsQuestion?
+  attempts         QuestionAttempt[]
 
   @@index([topicId])
+  @@index([subTopicId])
+  @@index([status])
+  @@index([contentHash])
+  @@index([canonicalId])
   @@index([difficulty])
+  @@index([topicId, status, difficulty])
+  @@index([subTopicId, status, difficulty])
+}
+
+model QuestionContent {
+  id                    String   @id @default(cuid())
+  questionId            String   @unique
+  prompt                String
+  promptBn              String?
+  options               Json     // [{text: "...", textBn: "..."}, ...]
+  correctIndex          Int
+  explanation           String
+  explanationBn         String?
+  detailedExplanation   String?  // For AI Tutor context
+
+  question              Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuestionSource {
+  id              String   @id @default(cuid())
+  questionId      String   @unique
+  examYear        Int?              // BCS year (e.g., 40, 41, 42)
+  questionNumber  Int?              // Question number in that exam
+  sourceType      String            // 'bcs-official' | 'bcs-unofficial' | 'curated' | 'ai-generated'
+  sourceName      String?
+  sourceUrl       String?
+  verifiedAt      DateTime?
+  verifiedBy      String?           // User ID of verifier
+
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuestionVersion {
+  id            String   @id @default(cuid())
+  questionId    String
+  version       Int
+  prompt        String
+  promptBn      String?
+  options       Json
+  correctIndex  Int
+  explanation   String
+  changedBy     String?
+  changedAt     DateTime @default(now())
+  changeReason  String?
+
+  question      Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, version])
+  @@index([questionId])
+}
+
+model QuestionStats {
+  id               String   @id @default(cuid())
+  questionId       String   @unique
+  attemptCount     Int      @default(0)
+  correctCount     Int      @default(0)
+  avgTimeSeconds   Float    @default(0)
+  difficultyRating Float    @default(0)   // Computed from actual performance
+
+  question         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model CurrentAffairsQuestion {
+  id              String   @id @default(cuid())
+  questionId      String   @unique
+  eventDate       DateTime
+  publicationDate DateTime @default(now())
+  validUntil      DateTime?
+  sourceType      String         // 'newspaper' | 'government' | 'international' | 'ai-generated'
+  sourceName      String?
+  sourceUrl       String?
+  status          String   @default("active")  // 'active' | 'expired' | 'archived'
+
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([validUntil])
+  @@index([status])
 }
 
 model Test {
