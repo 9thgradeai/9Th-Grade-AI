@@ -120,25 +120,6 @@ function validateArray<T>(
   return value.map((item, index) => itemValidator(item, index))
 }
 
-/** Validate nested object field. */
-function validateObject<T>(
-  obj: Record<string, unknown>,
-  key: string,
-  context: string,
-  validator: (obj: Record<string, unknown>) => T
-): T {
-  const value = obj[key]
-  if (!isObject(value)) {
-    throw new ValidationError(
-      `${context}: field "${key}" must be an object`,
-      key,
-      'object',
-      value
-    )
-  }
-  return validator(value)
-}
-
 /** Validate optional string field. */
 function validateOptionalString(obj: Record<string, unknown>, key: string): string | undefined {
   const value = obj[key]
@@ -303,7 +284,7 @@ export function validateRoadmap(obj: unknown): Roadmap {
     currentMastery: validateNumber(obj, 'currentMastery', 'Roadmap'),
     targetMastery: validateNumber(obj, 'targetMastery', 'Roadmap'),
     dailyEffortMinutes: validateNumber(obj, 'dailyEffortMinutes', 'Roadmap'),
-    phases: validateArray(obj, 'phases', 'Roadmap', (item, index) => validateRoadmapPhase(item)),
+    phases: validateArray(obj, 'phases', 'Roadmap', (item) => validateRoadmapPhase(item)),
     priorities: validateArray(obj, 'priorities', 'Roadmap', (item, index) => {
       if (!isString(item)) {
         throw new ValidationError(`Roadmap.priorities[${index}] must be a string`, `priorities[${index}]`, 'string', item)

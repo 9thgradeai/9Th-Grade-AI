@@ -5,7 +5,14 @@
    ============================================================ */
 
 import { z } from 'zod';
-import type { Test, TestResult } from '@/lib/types';
+import type { Test } from '@/lib/types';
+import { ValidationError } from '@/lib/validation';
+
+interface RequestOptions {
+  body?: unknown
+  headers?: Record<string, string>
+  timeoutMs?: number
+}
 
 /* ============================================================
    Validation Schemas
@@ -17,21 +24,18 @@ import type { Test, TestResult } from '@/lib/types';
   */
 export const questionListParamsSchema = z.object({
   topicId: z.string().min(1, 'Topic ID is required'),
-  difficulty: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : undefined))
-    .pipe(z.number().int().min(1).max(5).optional()),
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20))
-    .pipe(z.number().int().min(1).max(100).optional()),
-  offset: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 0))
-    .pipe(z.number().int().min(0).optional()),
+  difficulty: z.preprocess(
+    (val) => (val ? parseInt(val as string, 10) : undefined),
+    z.number().int().min(1).max(5).optional()
+  ),
+  limit: z.preprocess(
+    (val) => (val ? parseInt(val as string, 10) : 20),
+    z.number().int().min(1).max(100)
+  ).optional(),
+  offset: z.preprocess(
+    (val) => (val ? parseInt(val as string, 10) : 0),
+    z.number().int().min(0)
+  ).optional(),
   subTopicId: z.string().optional(),
   status: z
     .enum(['draft', 'review', 'approved', 'published', 'archived'])
@@ -46,18 +50,16 @@ export const testBuildPayloadSchema = z.object({
   examId: z.string().optional(),
   subjectId: z.string().optional(),
   topicId: z.string().optional(),
-  count: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 10))
-    .pipe(z.number().int().min(1).max(50).optional()),
+  count: z.preprocess(
+    (val) => (val ? parseInt(val as string, 10) : 10),
+    z.number().int().min(1).max(50)
+  ).optional(),
   name: z.string().optional(),
   kind: z.enum(['topic', 'diagnostic', 'mock']).optional(),
-  adaptive: z
-    .string()
-    .optional()
-    .transform((val) => val ? val === 'true' || val === '1' : false)
-    .pipe(z.boolean().optional())
+  adaptive: z.preprocess(
+    (val) => (val ? val === 'true' || val === '1' : false),
+    z.boolean()
+  ).optional(),
 })
 .refine(
   (data) => {
@@ -86,7 +88,7 @@ export const testSubmitPayloadSchema = z.object({
       confidence: z.number().int().min(1).max(5).optional(),
     })
   )
-  )
+})
   .refine(
     (data) => {
       const questionIds = data.attempts.map((a) => a.questionId);
@@ -118,12 +120,12 @@ export const testSubmitPayloadSchema = z.object({
      return questionListParamsSchema.parse(params);
    } catch (error) {
      if (error instanceof z.ZodError) {
-       const formattedErrors = error.errors.map((err) => ({
-         field: err.path.join('.'),
-         message: err.message,
-         code: err.code,
-       }));
-       throw new ValidationError('Invalid question list parameters', formattedErrors);
+        const formattedErrors = error.issues.map((err) => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code,
+        }));
+        throw new ValidationError('Invalid question list parameters', undefined, undefined, formattedErrors);
      }
      throw error;
    }
@@ -148,12 +150,12 @@ export const testSubmitPayloadSchema = z.object({
      return testBuildPayloadSchema.parse(body);
    } catch (error) {
      if (error instanceof z.ZodError) {
-       const formattedErrors = error.errors.map((err) => ({
-         field: err.path.join('.'),
-         message: err.message,
-         code: err.code,
-       }));
-       throw new ValidationError('Invalid test build parameters', formattedErrors);
+        const formattedErrors = error.issues.map((err) => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code,
+        }));
+        throw new ValidationError('Invalid test build parameters', undefined, undefined, formattedErrors);
      }
      throw error;
    }
@@ -168,7 +170,7 @@ export const testSubmitPayloadSchema = z.object({
  ): {
    attempts: Array<{
      questionId: string
-     selectedIndex: number | null
+      selectedIndex?: number | undefined
      timeSpentSeconds?: number
      confidence?: number
    }>
@@ -177,12 +179,12 @@ export const testSubmitPayloadSchema = z.object({
      return testSubmitPayloadSchema.parse(body);
    } catch (error) {
      if (error instanceof z.ZodError) {
-       const formattedErrors = error.errors.map((err) => ({
-         field: err.path.join('.'),
-         message: err.message,
-         code: err.code,
-       }));
-       throw new ValidationError('Invalid test submission parameters', formattedErrors);
+        const formattedErrors = error.issues.map((err) => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code,
+        }));
+        throw new ValidationError('Invalid test submission parameters', undefined, undefined, formattedErrors);
      }
      throw error;
    }
@@ -195,7 +197,16 @@ export const testSubmitPayloadSchema = z.object({
  /**
   * Wrapper for API client methods that adds automatic validation
   */
- export function createValidatedClient(baseClient: any) {
+ interface WrappedClient {
+  get<T>(path: string, opts?: RequestOptions): Promise<T>
+  post<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  patch<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  delete<T>(path: string, opts?: RequestOptions): Promise<T>
+  [key: string]: unknown
+}
+
+export function createValidatedClient(baseClient: WrappedClient) {
    return {
      ...baseClient,
      async get<T>(path: string, options: any = {}) {
@@ -244,10 +255,3 @@ export const testSubmitPayloadSchema = z.object({
  /* ============================================================
     Error Classes
     ============================================================ */
-
- export class ValidationError extends Error {
-   constructor(message: string, public details?: unknown) {
-     super(message);
-     this.name = 'ValidationError';
-   }
- }

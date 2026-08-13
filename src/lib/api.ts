@@ -65,7 +65,7 @@ const valueCache = new Map<string, { value: unknown; expiresAt: number }>()
  * `ttlMs`. `ttlMs` is used only for static catalog reads. Never caches
  * rejections.
  */
-function memo<T>(key: string, real: () => Promise<T>, fallback?: () => Promise<T>, ttlMs?: number): Promise<T> {
+function memo<T>(key: string, real: () => Promise<T>, ttlMs?: number, fallback?: () => Promise<T>): Promise<T> {
   if (ttlMs) {
     const c = valueCache.get(key)
     if (c && c.expiresAt > Date.now()) return Promise.resolve(c.value as T)
@@ -321,6 +321,7 @@ export const api = {
             timezone: u.timezone ?? 'Asia/Dhaka',
             createdAt: u.createdAt ?? new Date().toISOString(),
           })),
+      undefined,
       () => withLoading(data.user),
     )
   },
@@ -372,8 +373,8 @@ export const api = {
     return memo(
       `getTopic:${id}`,
       () => client.get<RawTopic>(`/exams/topics/${id}`).then(toTopic),
-      () => withLoading(data.topics.find((t) => t.id === id)),
       TTL_CATALOG,
+      () => withLoading(data.topics.find((t) => t.id === id)),
     )
   },
 
