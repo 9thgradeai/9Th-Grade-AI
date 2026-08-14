@@ -6,7 +6,6 @@ import { sm2, ensureInitialSchedule, ensureRevisionItems, isOverdue } from '../l
 
 /* ============================================================
    Revision routes — SM-2 spaced-repetition schedule.
-   Paid feature — gated behind `unlimited-revision`.
    ============================================================ */
 
 export const revisionRoutes = new Hono<AppEnv>()

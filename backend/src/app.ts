@@ -3,9 +3,10 @@ import { cors } from 'hono/cors'
 import { compress } from 'hono/compress'
 import { PrismaClient } from '@prisma/client'
 import { structuredLogger } from './middleware/logger'
+import { requestId } from './middleware/requestId'
 import { rateLimit } from './middleware/rateLimit'
 import { securityHeaders } from './middleware/security'
-import { cacheMode } from './lib/cache'
+import { csrfProtection } from './middleware/csrf'
 import { initSentry, captureError } from './lib/sentry'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
@@ -17,7 +18,6 @@ import { dashboardRoutes } from './routes/dashboard'
 import { rankRoutes } from './routes/rank'
 import { strategyRoutes } from './routes/strategy'
 import { revisionRoutes } from './routes/revision'
-import { paymentsRoutes, webhookRoute } from './routes/payments'
 import { realtimeRoutes } from './routes/realtime'
 import { adminRoutes } from './routes/admin'
 import { authMiddleware } from './middleware/auth'
@@ -37,6 +37,7 @@ initSentry()
 const app = new Hono()
 
 // Global middleware
+app.use('*', requestId)
 app.use('*', structuredLogger)
 app.use('*', compress())
 app.use('*', securityHeaders)
@@ -55,21 +56,36 @@ app.use('*', cors({
 // Health / readiness check (Phase 6 monitoring)
 app.get('/api/health', async (c) => {
   let db = 'ok'
+  let redis = 'unknown'
   try {
     await prisma.$queryRaw`SELECT 1`
   } catch {
     db = 'down'
   }
+
+  const cache = await import('./lib/cache').then(m => m.cacheMode)
+  if (cache === 'redis') {
+    try {
+      const r = await (await import('@upstash/redis')).Redis.fromEnv()
+      await r.ping()
+      redis = 'ok'
+    } catch {
+      redis = 'down'
+    }
+  } else {
+    redis = 'memory'
+  }
+
+  const degraded = db === 'down' || redis === 'down'
+  const status = db === 'down' ? 'unhealthy' : degraded ? 'degraded' : 'healthy'
+
   return c.json({
-    status: db === 'ok' ? 'ok' : 'degraded',
+    status,
     db,
+    redis,
+    cache,
     uptime: Math.floor(process.uptime()),
     mode: process.env.NODE_ENV || 'development',
-    cache: cacheMode,
-    mock: {
-      stripe: !process.env.STRIPE_SECRET_KEY,
-      email: !process.env.RESEND_API_KEY,
-    },
     timestamp: new Date().toISOString(),
   })
 })
@@ -82,6 +98,8 @@ const protectedApp = new Hono<AppEnv>()
 protectedApp.use('*', authMiddleware)
 // General API limit: 100 req / min / user (auth ran above, so userId is set).
 protectedApp.use('*', rateLimit({ windowMs: 60_000, max: 100, key: (c) => c.get('userId') as string | undefined }))
+// CSRF protection for state-changing endpoints.
+protectedApp.use('*', csrfProtection)
 protectedApp.route('/users', userRoutes)
 protectedApp.route('/exams', examRoutes)
 protectedApp.route('/questions', questionRoutes)
@@ -89,17 +107,11 @@ protectedApp.route('/tests', testRoutes)
 protectedApp.route('/performance', performanceRoutes)
 protectedApp.route('/dashboard', dashboardRoutes)
 protectedApp.route('/rank', rankRoutes)
-// Paid-feature gates for /strategy, /ai/*, /revision/* live inside their route
-// modules (featureGate.use('*', ...)) so subpaths are matched reliably.
 protectedApp.route('/', strategyRoutes)
 protectedApp.route('/revision', revisionRoutes)
-protectedApp.route('/payments', paymentsRoutes)
 protectedApp.route('/realtime', realtimeRoutes)
 protectedApp.use('/admin', roleGuard('admin'))
 protectedApp.route('/admin', adminRoutes)
-
-// Public webhook — mounted outside auth (before /api) so Stripe can reach it.
-app.route('/api/payments/webhook', webhookRoute)
 
 app.route('/api', protectedApp)
 
@@ -110,10 +122,10 @@ app.notFound((c) => {
 
 // Error handler — brief §43: never expose stack traces or internal details.
 app.onError((err, c) => {
-  const rid = c.req.header('x-request-id') ?? crypto.randomUUID()
+  const rid = (c as unknown as { get: (key: string) => unknown }).get('requestId') ?? c.req.header('x-request-id') ?? crypto.randomUUID()
   console.error(JSON.stringify({ level: 'error', request_id: rid, route: c.req.path, message: err.message }))
-  captureError(err, { route: c.req.path, requestId: rid })
-  return c.json({ error: 'Internal server error', requestId: rid }, 500)
+  captureError(err, { route: c.req.path, requestId: rid as string })
+  return c.json({ error: 'Internal server error', requestId: rid as string }, 500)
 })
 
 export { app }

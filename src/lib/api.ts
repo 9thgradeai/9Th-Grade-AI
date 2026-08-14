@@ -12,10 +12,12 @@ import type {
   AIBriefing,
   AIRecommendation,
   Test,
+  QuestionAttempt,
+  TestResult,
 } from '@/lib/types'
 import * as data from '@/lib/data'
 import { listMemoryItems } from '@/lib/memoryStore'
-import { client, isFeatureLocked } from '@/lib/client'
+import { client } from '@/lib/client'
 
 /* ============================================================
    Service layer. UI components depend on these async functions
@@ -50,7 +52,6 @@ async function fromBackend<T>(real: () => Promise<T>, fallback?: () => Promise<T
   try {
     return await real()
   } catch (e) {
-    if (isFeatureLocked(e)) throw e
     if (import.meta.env.DEV && fallback) return fallback()
     throw e
   }
@@ -170,8 +171,6 @@ interface RawQuestion {
   topicId: string
   prompt: string
   options: string[]
-  correctIndex?: number
-  explanation?: string
   difficulty: number
   targetSeconds: number
 }
@@ -181,8 +180,6 @@ function toQuestion(q: RawQuestion): Question {
     topicId: q.topicId,
     prompt: q.prompt,
     options: q.options,
-    correctIndex: q.correctIndex,
-    explanation: q.explanation,
     difficulty: q.difficulty as 1 | 2 | 3 | 4 | 5,
     targetSeconds: q.targetSeconds,
   }
@@ -463,10 +460,9 @@ export const api = {
     )
   },
 
-  /* The exam engine stays on mock for now: the practice/mock UI grades
-     client-side and relies on `correctIndex`, which the backend deliberately
-     strips on delivery (§31). Server-side grading is a follow-up that reworks
-     Practice/MockTest/Results together. */
+  /* The exam engine stays on mock for now: the practice/mock UI sends
+     selected answers to the backend for server-side grading. The backend
+     deliberately strips answer keys from question delivery. */
   /** Save onboarding preferences to the real backend (never mocked). */
   savePreferences(prefs: { examId: string; examDate: string; dailyTime: string; level: string; diagnosticScore: number; priorities?: string[] }): Promise<{ ok: boolean; onboardingCompleted: boolean }> {
     return client.post('/users/me/preferences', prefs)
@@ -480,20 +476,37 @@ export const api = {
   getSampleResult: () => withLoading(data.sampleResult),
 
   buildTest(examId: string, name: string, kind: Test['kind'], topicId?: string, count = 5): Promise<Test> {
-    const bank = topicId ? data.questions.filter((q) => q.topicId === topicId) : data.questions
-    const pool = bank.length ? bank : data.questions
-    return withLoading(
-      {
-        id: `test_${Math.random().toString(36).slice(2, 8)}`,
-        examId,
-        name,
-        kind,
-        topicId,
-        questionIds: pool.slice(0, count).map((q) => q.id),
-        durationMinutes: count * 1.2,
-        startedAt: new Date().toISOString(),
-      },
-      260,
+    return memo(
+      `buildTest:${examId}:${topicId ?? 'all'}:${count}`,
+      () =>
+        client
+          .post<{
+            test: { id: string; name: string; kind: string; examId: string; durationMinutes: number; totalQuestions: number; createdAt: string }
+            questions: RawQuestion[]
+          }>('/tests/build', {
+            examId,
+            name,
+            kind,
+            ...(topicId ? { topicId } : {}),
+            count,
+          })
+          .then((r) => ({
+            id: r.test.id,
+            examId: r.test.examId,
+            name: r.test.name,
+            kind: r.test.kind as Test['kind'],
+            subjectId: undefined,
+            topicId,
+            questionIds: r.questions.map((q) => q.id),
+            durationMinutes: r.test.durationMinutes,
+            startedAt: r.test.createdAt,
+            questions: r.questions.map(toQuestion),
+          })),
+      0,
     )
+  },
+
+  gradeAttempts(attempts: Pick<QuestionAttempt, 'questionId' | 'selectedIndex' | 'timeSpentSeconds' | 'confidence'>[]): Promise<{ result: TestResult }> {
+    return client.post('/tests/grade', { attempts })
   },
 }

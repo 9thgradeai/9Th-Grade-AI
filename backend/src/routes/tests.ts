@@ -8,10 +8,10 @@ import {
   refreshPerformance,
   type GradedQuestion,
 } from '../lib/score'
-import { diagnoseTest, recommendDifficulty } from '../lib/ai'
+import { recommendDifficulty } from '../lib/ai'
 import { realtime } from '../lib/realtime'
-import { sendEmail } from '../lib/email'
 import { cacheDel, cacheKey } from '../lib/cache'
+import { enqueueJob } from '../lib/jobs'
 
 /* ============================================================
    Test lifecycle — build, take, submit, grade.
@@ -105,26 +105,31 @@ testRoutes.post('/build', async (c) => {
   }
 
   // Sample the question pool for this scope.
+  // Bound the query with a take limit to avoid loading thousands of rows
+  // into memory. The final slice below enforces the requested `count`.
+  const MAX_POOL = 200
+  let poolWhere: Record<string, unknown> = { ...scopeWhere, status: 'PUBLISHED' }
+  if (adaptive) {
+    const level = await recommendDifficulty(userId, resolvedSubjectId ?? undefined)
+    poolWhere = {
+      ...poolWhere,
+      difficulty: { gte: Math.max(1, level - 1), lte: Math.min(5, level + 1) },
+    }
+  }
   const pool = await prisma.question.findMany({
-    where: scopeWhere,
+    where: poolWhere,
     include: {
       topic: { include: { subject: true } },
       content: { select: { correctIndex: true } },
     },
+    take: MAX_POOL,
   })
   if (pool.length === 0) {
     return c.json({ error: 'No questions available for this scope' }, 404)
   }
 
-  // AI-adaptive sampling: bias toward the user's recommended difficulty.
-  let sampledPool = pool
-  if (adaptive) {
-    const level = await recommendDifficulty(userId, resolvedSubjectId ?? undefined)
-    const near = pool.filter((q) => Math.abs(q.difficulty - level) <= 1)
-    if (near.length > 0) sampledPool = near
-  }
-
-  const selected = shuffle(sampledPool).slice(0, Math.min(count, sampledPool.length))
+  // If not adaptive, shuffle the bounded pool; if adaptive, pool is already biased.
+  const selected = shuffle(pool).slice(0, Math.min(count, pool.length))
   const questionIds = selected.map((q) => q.id)
   const durationMinutes = Math.max(1, Math.round(selected.reduce((s, q) => s + q.targetSeconds, 0) / 60))
 
@@ -194,6 +199,74 @@ const submitSchema = z.object({
   ),
 })
 
+// POST /api/tests/grade — server-side grading without persisting a test.
+// Used by practice/mock flows that need authoritative scoring.
+testRoutes.post('/grade', async (c) => {
+  const userId = c.get('userId') as string
+  const body = await c.req.json()
+  const parsed = submitSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
+  }
+
+  const questionIds = parsed.data.attempts.map((a) => a.questionId)
+  if (questionIds.length === 0) {
+    return c.json({ error: 'No attempts provided' }, 400)
+  }
+
+  const questions = await prisma.question.findMany({
+    where: { id: { in: questionIds } },
+    include: {
+      topic: { include: { subject: true } },
+      content: { select: { correctIndex: true } },
+    },
+  })
+
+  const byId = new Map(parsed.data.attempts.map((a) => [a.questionId, a]))
+  const graded: GradedQuestion[] = questions.map((q) => ({
+    questionId: q.id,
+    subjectId: q.topic.subjectId,
+    subjectName: q.topic.subject.name,
+    topicId: q.topicId,
+    topicName: q.topic.name,
+    difficulty: q.difficulty,
+    targetSeconds: q.targetSeconds,
+  }))
+
+  const submittedAttempts = graded.map((gq) => {
+    const a = byId.get(gq.questionId)
+    const selectedIndex = a?.selectedIndex ?? null
+    const q = questions.find((x) => x.id === gq.questionId)!
+    const correctIndex = q.content?.correctIndex ?? 0
+    return {
+      questionId: gq.questionId,
+      selectedIndex,
+      correct: selectedIndex != null && selectedIndex === correctIndex,
+      timeSpentSeconds: a?.timeSpentSeconds ?? 0,
+      confidence: a?.confidence ?? 3,
+    }
+  })
+
+  const provisional = computeTestResult(graded, submittedAttempts, 0)
+  // Use a default examId for percentile (the user's primary exam if available)
+  const primaryExamId = await prisma.testResult
+    .findFirst({ where: { userId }, select: { test: { select: { examId: true } } } })
+    .then((r) => r?.test.examId)
+  const percentile = primaryExamId ? await computePercentile(primaryExamId, provisional.score) : 50
+  const result = computeTestResult(graded, submittedAttempts, percentile)
+
+  return c.json({
+    result: {
+      ...result,
+      attempts: submittedAttempts.map(a => ({
+        questionId: a.questionId,
+        selectedIndex: a.selectedIndex,
+        correct: a.correct,
+      })),
+    },
+  })
+})
+
 // POST /api/tests/:id/submit — grade and persist the result.
 testRoutes.post('/:id/submit', async (c) => {
   const userId = c.get('userId') as string
@@ -203,7 +276,13 @@ testRoutes.post('/:id/submit', async (c) => {
     include: { result: { select: { id: true } } },
   })
   if (!test) return c.json({ error: 'Test not found' }, 404)
-  if (test.completedAt || test.result) {
+
+  // Atomically claim this test to prevent duplicate submissions under concurrency.
+  const claimed = await prisma.test.updateMany({
+    where: { id, userId, completedAt: null },
+    data: { completedAt: new Date() },
+  })
+  if (claimed.count === 0) {
     return c.json({ error: 'Test already completed' }, 409)
   }
 
@@ -256,7 +335,10 @@ testRoutes.post('/:id/submit', async (c) => {
 
   // Persist attempts + result + completion in a transaction.
   await prisma.$transaction(async (tx) => {
-    await tx.questionAttempt.createMany({ data: submittedAttempts })
+    await tx.questionAttempt.createMany({
+      data: submittedAttempts,
+      skipDuplicates: true,
+    })
     await tx.testResult.create({
       data: {
         testId: test.id,
@@ -286,10 +368,10 @@ testRoutes.post('/:id/submit', async (c) => {
 
   await refreshPerformance(userId, test.examId, result.timeSpentMinutes)
 
-  // Phase 3: persist AI recommendations from the diagnosis.
-  await diagnoseTest(test.id, userId)
+  // Phase 3: enqueue AI diagnosis as background job.
+  void enqueueJob('ai-diagnosis', { testId: test.id, userId })
 
-  // Phase 6: live updates + transactional result email (fire-and-forget).
+  // Phase 6: live updates + transactional result email (enqueued).
   realtime.publishToUser(userId, 'progress:update', {
     testId: test.id,
     score: result.score,
@@ -298,7 +380,7 @@ testRoutes.post('/:id/submit', async (c) => {
   realtime.publishToUser(userId, 'ranking:updated', { percentile: result.percentile })
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
   if (user) {
-    void sendEmail({
+    void enqueueJob('email', {
       to: user.email,
       subject: `Your ${test.name} result: ${result.score}%`,
       text: `Hi ${user.name || 'there'},\n\nYou scored ${result.score}% (${result.correct}/${result.total}) on "${test.name}".\n\n${result.diagnosis}\nNext: ${result.nextBestAction}\n\n— The 9Th-Grade AI team`,
@@ -310,7 +392,16 @@ testRoutes.post('/:id/submit', async (c) => {
   await cacheDel(cacheKey('strategy', userId))
   await cacheDel(cacheKey('briefing', userId))
 
-  return c.json({ result })
+  return c.json({
+    result: {
+      ...result,
+      attempts: submittedAttempts.map(a => ({
+        questionId: a.questionId,
+        selectedIndex: a.selectedIndex,
+        correct: a.correct,
+      })),
+    },
+  })
 })
 
 // GET /api/tests/:id/result
@@ -360,24 +451,33 @@ async function upsertProgress(
     return { accuracy, speed, retention, mastery }
   }
 
-  for (const [subjectId, agg] of subjectAgg) {
-    const m = toMetrics(agg)
-    const subject = await prisma.subject.findUnique({ where: { id: subjectId } })
-    if (!subject) continue
-    await prisma.userSubject.upsert({
-      where: { userId_subjectId: { userId, subjectId } },
-      update: m,
-      create: { userId, examId: subject.examId, subjectId, ...m },
-    })
-  }
+  // Batch load all needed subjects in one query.
+  const subjectIds = Array.from(subjectAgg.keys())
+  const subjects = subjectIds.length > 0
+    ? await prisma.subject.findMany({ where: { id: { in: subjectIds } }, select: { id: true, examId: true } })
+    : []
+  const subjectMap = new Map(subjects.map((s) => [s.id, s]))
 
-  for (const [topicId, agg] of topicAgg) {
-    const m = toMetrics(agg)
-    const status = m.accuracy >= 80 ? 'mastered' : m.accuracy >= 55 ? 'practicing' : 'learning'
-    await prisma.userTopic.upsert({
-      where: { userId_topicId: { userId, topicId } },
-      update: { ...m, status },
-      create: { userId, topicId, ...m, status },
-    })
-  }
+  await prisma.$transaction(async (tx) => {
+    for (const [subjectId, agg] of subjectAgg) {
+      const m = toMetrics(agg)
+      const subject = subjectMap.get(subjectId)
+      if (!subject) continue
+      await tx.userSubject.upsert({
+        where: { userId_subjectId: { userId, subjectId } },
+        update: m,
+        create: { userId, examId: subject.examId, subjectId, ...m },
+      })
+    }
+
+    for (const [topicId, agg] of topicAgg) {
+      const m = toMetrics(agg)
+      const status = m.accuracy >= 80 ? 'mastered' : m.accuracy >= 55 ? 'practicing' : 'learning'
+      await tx.userTopic.upsert({
+        where: { userId_topicId: { userId, topicId } },
+        update: { ...m, status },
+        create: { userId, topicId, ...m, status },
+      })
+    }
+  })
 }

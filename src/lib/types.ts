@@ -55,8 +55,6 @@ export interface Question {
   topicId: string
   prompt: string
   options: string[]
-  correctIndex?: number
-  explanation?: string
   difficulty: 1 | 2 | 3 | 4 | 5
   /** seconds a strong candidate should need */
   targetSeconds: number

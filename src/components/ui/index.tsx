@@ -9,7 +9,6 @@ import {
   useState,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { Crown, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 /* ---------- Button ---------- */
@@ -285,13 +284,12 @@ export function EmptyState({
   )
 }
 
-/* ---------- Feature-gate (paywall) notice ---------- */
+/* ---------- Notice banner ---------- */
 
-export function UpgradeNotice({
+export function NoticeBanner({
   feature,
   className,
 }: {
-  /** Human-readable name of the locked feature, e.g. "Mock Tests". */
   feature: string
   className?: string
 }) {
@@ -302,18 +300,10 @@ export function UpgradeNotice({
         className,
       )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent-hi">
-        <Crown size={18} />
-      </span>
-      <h3 className="text-lg font-semibold text-ink">{feature} is a premium feature</h3>
+      <h3 className="text-lg font-semibold text-ink">{feature}</h3>
       <p className="max-w-sm text-sm text-muted">
-        Unlock unlimited mock tests, adaptive exams, and AI strategy with a Pro plan.
+        This feature is available to all users.
       </p>
-      <div className="mt-2">
-        <LinkButton to="/pricing" iconRight={<ArrowRight size={14} />}>
-          See plans
-        </LinkButton>
-      </div>
     </div>
   )
 }

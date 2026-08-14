@@ -37,34 +37,32 @@ export default function Practice() {
     await runStart()
   }
 
-  function onFinish(attempts: QuestionAttempt[]) {
-    const correct = attempts.filter((a) => a.correct).length
-    const total = attempts.length
-    const accuracy = total ? Math.round((correct / total) * 100) : 0
-    const avgTime = total ? attempts.reduce((s, a) => s + a.timeSpentSeconds, 0) / total : 0
-    const speed = Math.max(20, Math.round(100 - (avgTime / 70) * 40))
-
-    const result: TestResult = {
-      id: `res_${Date.now()}`,
-      testId: 'practice',
-      score: accuracy,
-      accuracy,
-      speed,
-      retention: Math.round(accuracy * 0.92),
-      percentile: Math.round(40 + accuracy * 0.55),
-      correct,
-      total,
-      timeSpentMinutes: Math.round(attempts.reduce((s, a) => s + a.timeSpentSeconds, 0) / 60),
-      attempts,
-      losses: { Mathematics: 12, English: 6, 'International Affairs': 4 },
-      diagnosis:
-        'Your errors cluster on the harder difficulty questions. Focus on slowing the final computation to raise accuracy.',
-      nextBestAction: 'Complete a targeted session on this topic, then retest at the same difficulty.',
-      targetTopicId: topicId,
-      completedAt: new Date().toISOString(),
+  async function onFinish(attempts: QuestionAttempt[]) {
+    try {
+      const { result } = await api.gradeAttempts(attempts)
+      const final: TestResult = {
+        id: `res_${Date.now()}`,
+        testId: 'practice',
+        score: result.score,
+        accuracy: result.accuracy,
+        speed: result.speed,
+        retention: result.retention,
+        percentile: result.percentile,
+        correct: result.correct,
+        total: result.total,
+        timeSpentMinutes: result.timeSpentMinutes,
+        attempts,
+        losses: result.losses,
+        diagnosis: result.diagnosis,
+        nextBestAction: result.nextBestAction,
+        targetTopicId: topicId,
+        completedAt: new Date().toISOString(),
+      }
+      saveResult(final)
+      navigate('/results/practice')
+    } catch (e) {
+      console.error('Grading failed:', e)
     }
-    saveResult(result)
-    navigate('/results/practice')
   }
 
   if (session) {

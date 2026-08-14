@@ -223,8 +223,6 @@ export function validateQuestion(obj: unknown): Question {
       }
       return item
     }),
-    correctIndex: validateNumber(obj, 'correctIndex', 'Question'),
-    explanation: validateString(obj, 'explanation', 'Question'),
     difficulty: validateNumber(obj, 'difficulty', 'Question') as Question['difficulty'],
     targetSeconds: validateNumber(obj, 'targetSeconds', 'Question'),
   }

@@ -30,9 +30,9 @@ export default function Subject() {
   // Group topics under the canonical syllabus sections — each topic assigned to
   // exactly one section (first match wins) so reused placeholder ids don't duplicate.
   const grouped = syllabus
-    ? syllabus.sections.map((section) => ({
-        name: section.name,
-        topics: list.filter((t) => section.topics.some((st) => st.topicId === t.id)),
+    ? syllabus.domains.map((domain) => ({
+        name: domain.name.en,
+        topics: list.filter((t) => domain.topics.some((st) => st.id === t.id)),
       }))
     : null
   const seen = new Set<string>()

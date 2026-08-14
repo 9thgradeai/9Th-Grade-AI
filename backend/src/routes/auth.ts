@@ -4,9 +4,10 @@ import { randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
-import { signToken, verifyToken, authMiddleware } from '../middleware/auth'
+import { signToken, verifyToken, authMiddleware, hashToken } from '../middleware/auth'
 import { rateLimit, clientIp } from '../middleware/rateLimit'
 import { sendEmail } from '../lib/email'
+import { recordFailedLogin, clearFailedLogin, getLockoutRemaining, isLockedOut, getRecord } from '../lib/loginAttempts'
 
 /* ============================================================
    Auth routes — register, login, logout, session, password reset,
@@ -20,14 +21,14 @@ authRoutes.use('*', rateLimit({ windowMs: 60_000, max: 5, key: (c) => clientIp(c
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(1),
-  firstName: z.string().min(1),
+  password: z.string().min(8).max(128),
+  name: z.string().min(1).max(100),
+  firstName: z.string().min(1).max(100),
 })
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string(),
+  password: z.string().min(1).max(128),
 })
 
 // Register
@@ -69,8 +70,11 @@ authRoutes.post('/register', async (c) => {
   // Sign token
   const token = signToken({ userId: user.id, email: user.email })
 
+  const isProd = process.env.NODE_ENV === 'production'
+  const cookieAttrs = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProd ? '; Secure' : ''}`
+
   // Set cookie
-  c.header('Set-Cookie', `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`)
+  c.header('Set-Cookie', `token=${token}; ${cookieAttrs}`)
 
   return c.json({
     user: {
@@ -94,24 +98,45 @@ authRoutes.post('/login', async (c) => {
   }
 
   const { email, password } = parsed.data
+  const ip = clientIp(c)
+  const accountKey = `login:account:${email.toLowerCase()}`
+  const ipKey = `login:ip:${ip}`
+
+  // Check lockout before credential verification to avoid timing attacks.
+  const [accountRecord, ipRecord] = await Promise.all([
+    getLockoutRemaining(accountKey, ipKey),
+    Promise.resolve(isLockedOut((await getRecord(accountKey)) || null) ? 1 : 0),
+  ])
+  const lockoutRemaining = Math.max(accountRecord, ipRecord > 0 ? 1 : 0)
+  if (lockoutRemaining > 0) {
+    return c.json({ error: 'Too many failed attempts. Try again later.', code: 'TEMPORARY_LOCKOUT', retryAfter: lockoutRemaining }, 429)
+  }
 
   // Find user
   const user = await prisma.user.findUnique({ where: { email } })
   if (!user || !user.password) {
+    await recordFailedLogin(accountKey, ipKey)
     return c.json({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' }, 401)
   }
 
   // Verify password
   const valid = await bcrypt.compare(password, user.password)
   if (!valid) {
+    await recordFailedLogin(accountKey, ipKey)
     return c.json({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' }, 401)
   }
+
+  // Clear failed attempts on successful login.
+  await clearFailedLogin(accountKey, ipKey)
 
   // Sign token
   const token = signToken({ userId: user.id, email: user.email })
 
+  const isProd = process.env.NODE_ENV === 'production'
+  const cookieAttrs = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProd ? '; Secure' : ''}`
+
   // Set cookie
-  c.header('Set-Cookie', `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`)
+  c.header('Set-Cookie', `token=${token}; ${cookieAttrs}`)
 
   return c.json({
     user: {
@@ -128,7 +153,9 @@ authRoutes.post('/login', async (c) => {
 
 // Logout
 authRoutes.post('/logout', (c) => {
-  c.header('Set-Cookie', 'token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')
+  const isProd = process.env.NODE_ENV === 'production'
+  const cookieAttrs = `Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isProd ? '; Secure' : ''}`
+  c.header('Set-Cookie', `token=; ${cookieAttrs}`)
   return c.json({ ok: true })
 })
 
@@ -193,9 +220,11 @@ authRoutes.post('/refresh', async (c) => {
   if (!user) return c.json({ error: 'Authentication required' }, 401)
 
   const fresh = signToken({ userId: user.id, email: user.email })
+  const isProd = process.env.NODE_ENV === 'production'
+  const cookieAttrs = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProd ? '; Secure' : ''}`
   c.header(
     'Set-Cookie',
-    `token=${fresh}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`,
+    `token=${fresh}; ${cookieAttrs}`,
   )
   return c.json({ user, token: fresh })
 })
@@ -212,9 +241,10 @@ authRoutes.post('/forgot-password', async (c) => {
   const user = await prisma.user.findUnique({ where: { email } })
   if (user) {
     const token = randomBytes(32).toString('hex')
+    const tokenHash = hashToken(token)
     await prisma.user.update({
       where: { id: user.id },
-      data: { resetToken: token, resetTokenExpires: new Date(Date.now() + 3600_000) },
+      data: { resetToken: tokenHash, resetTokenExpires: new Date(Date.now() + 3600_000) },
     })
     void sendEmail({
       to: email,
@@ -232,8 +262,9 @@ authRoutes.post('/reset-password', async (c) => {
     .safeParse(await c.req.json())
   if (!parsed.success) return c.json({ error: 'Invalid input' }, 400)
   const { token, newPassword } = parsed.data
+  const tokenHash = hashToken(token)
   const user = await prisma.user.findFirst({
-    where: { resetToken: token, resetTokenExpires: { gt: new Date() } },
+    where: { resetToken: tokenHash, resetTokenExpires: { gt: new Date() } },
   })
   if (!user) return c.json({ error: 'Invalid or expired token' }, 400)
   const hashed = await bcrypt.hash(newPassword, 12)
@@ -267,7 +298,8 @@ authRoutes.post('/request-verification', authMiddleware, async (c) => {
   if (!user) return c.json({ error: 'User not found' }, 404)
   if (user.emailVerified) return c.json({ ok: true, alreadyVerified: true })
   const token = randomBytes(32).toString('hex')
-  await prisma.user.update({ where: { id: userId }, data: { verificationToken: token } })
+  const tokenHash = hashToken(token)
+  await prisma.user.update({ where: { id: userId }, data: { verificationToken: tokenHash } })
   void sendEmail({
     to: user.email,
     subject: 'Verify your 9Th-Grade AI email',
@@ -280,7 +312,8 @@ authRoutes.post('/request-verification', authMiddleware, async (c) => {
 authRoutes.post('/verify-email', async (c) => {
   const parsed = z.object({ token: z.string().min(10) }).safeParse(await c.req.json())
   if (!parsed.success) return c.json({ error: 'Invalid token' }, 400)
-  const user = await prisma.user.findFirst({ where: { verificationToken: parsed.data.token } })
+  const tokenHash = hashToken(parsed.data.token)
+  const user = await prisma.user.findFirst({ where: { verificationToken: tokenHash } })
   if (!user) return c.json({ error: 'Invalid token' }, 400)
   await prisma.user.update({
     where: { id: user.id },

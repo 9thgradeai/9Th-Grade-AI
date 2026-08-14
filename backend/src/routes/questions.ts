@@ -1,12 +1,15 @@
 import { Hono } from 'hono'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
-import { cacheGet, cacheSet, cacheKey } from '../lib/cache'
+import { cacheGet, cacheSet, cacheDel, cacheKey } from '../lib/cache'
 import { z } from 'zod'
+import { requireAdmin } from '../middleware/admin'
 
 /* ============================================================
    Question routes — study/practice question bank.
    Enhanced with QuestionContent, SubTopic, QuestionSource, QuestionStats
+
+   Mutation routes require admin authentication.
    ============================================================ */
 
 export const questionRoutes = new Hono<AppEnv>()
@@ -18,7 +21,7 @@ questionRoutes.get('/:topicId', async (c) => {
 
   const difficulty = q.difficulty ? Number(q.difficulty) : undefined
   const subTopicId = q.subTopicId || undefined
-  const status = q.status || 'published'
+  const status = q.status || 'PUBLISHED'
   const limit = Math.min(Number(q.limit ?? 20) || 20, 100)
   const offset = Number(q.offset ?? 0) || 0
 
@@ -69,14 +72,26 @@ questionRoutes.get('/:topicId', async (c) => {
   return c.json(body)
 })
 
-// GET /api/questions/:id/full — Get full question with explanation (for review/results)
+// GET /api/questions/:id/full — Get question metadata (sanitized).
+// Full content (correctIndex, explanation) is only available server-side
+// during grading. This endpoint returns the same sanitized shape as the
+// list endpoint to prevent IDOR and answer leakage.
 questionRoutes.get('/:id/full', async (c) => {
   const id = c.req.param('id')
 
   const question = await prisma.question.findUnique({
     where: { id },
     include: {
-      content: true,
+      content: {
+        select: {
+          prompt: true,
+          promptBn: true,
+          options: true,
+          explanation: true,
+          explanationBn: true,
+          detailedExplanation: true,
+        },
+      },
       source: true,
       stats: true,
       subTopic: { select: { id: true, name: true, nameBn: true } },
@@ -84,11 +99,21 @@ questionRoutes.get('/:id/full', async (c) => {
     },
   })
 
-  if (!question) {
+  if (!question || question.status !== 'PUBLISHED') {
     return c.json({ error: 'Question not found' }, 404)
   }
 
-  return c.json(question)
+  // Sanitize: strip answer data (correctIndex, explanation) from response.
+  const { content, ...rest } = question
+  const base: Record<string, unknown> = { ...rest }
+  if (content) {
+    base.prompt = content.prompt
+    base.promptBn = content.promptBn
+    base.options = Array.isArray(content.options)
+      ? content.options.map((o) => (typeof o === 'object' && o && 'text' in o ? (o as Record<string, string>).text : String(o)))
+      : content.options
+  }
+  return c.json(base)
 })
 
 // GET /api/questions/random — Random question selection for adaptive practice
@@ -99,7 +124,7 @@ questionRoutes.get('/random', async (c) => {
   const subTopicId = q.subTopicId || undefined
   const difficulty = q.difficulty ? Number(q.difficulty) : undefined
   const count = Math.min(Number(q.count ?? 5) || 5, 20)
-  const status = q.status || 'published'
+  const status = q.status || 'PUBLISHED'
   const excludeIds = q.exclude ? q.exclude.split(',') : []
 
   if (!topicId) {
@@ -120,24 +145,39 @@ questionRoutes.get('/random', async (c) => {
     return c.json({ questions: [] })
   }
 
-  // Use Prisma's random ordering via raw query for efficiency
-  const questions = await prisma.$queryRawUnsafe(
-    `SELECT q.*, qc.prompt, qc.prompt_bn, qc.options, qc.correct_index, qc.explanation, qc.explanation_bn, qc.detailed_explanation
-     FROM "Question" q
-     LEFT JOIN "QuestionContent" qc ON qc."questionId" = q.id
-     WHERE q."topicId" = $1
-     AND q."status" = $2
-     ${subTopicId ? `AND q."subTopicId" = '${subTopicId}'` : ''}
-     ${difficulty ? `AND q.difficulty = ${difficulty}` : ''}
-     ${excludeIds.length > 0 ? `AND q.id NOT IN (${excludeIds.map(id => `'${id}'`).join(',')})` : ''}
-     ORDER BY RANDOM()
-     LIMIT ${count}`,
-    topicId,
-    status
-  ) as any[]
+  // Efficient random sampling without ORDER BY RANDOM().
+  // Fetch a small buffer (up to 3x requested count) and pick randomly in JS.
+  // This uses indexed WHERE filters and avoids a full-table sort.
+  const bufferSize = Math.min(count * 3, total)
+  const buffer = await prisma.question.findMany({
+    where,
+    include: {
+      content: {
+        select: {
+          prompt: true,
+          promptBn: true,
+          options: true,
+          correctIndex: true,
+          explanation: true,
+          explanationBn: true,
+          detailedExplanation: true,
+        },
+      },
+    },
+    take: bufferSize,
+  })
+
+  // Fisher-Yates partial shuffle to pick `count` random items
+  const selected: typeof buffer = []
+  const pool = [...buffer]
+  for (let i = 0; i < Math.min(count, pool.length); i++) {
+    const j = Math.floor(Math.random() * (pool.length - i)) + i
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    selected.push(pool[i])
+  }
 
   // Sanitize for practice mode (no correct answer)
-  const sanitized = questions.map((q) => ({
+  const sanitized = selected.map((q) => ({
     id: q.id,
     topicId: q.topicId,
     subTopicId: q.subTopicId,
@@ -149,10 +189,10 @@ questionRoutes.get('/random', async (c) => {
     status: q.status,
     verificationStatus: q.verificationStatus,
     contentHash: q.contentHash,
-    content: q.prompt ? {
-      prompt: q.prompt,
-      promptBn: q.prompt_bn,
-      options: q.options,
+    content: q.content ? {
+      prompt: q.content.prompt,
+      promptBn: q.content.promptBn,
+      options: q.content.options,
       // correctIndex and explanation omitted for practice
     } : null,
   }))
@@ -217,7 +257,7 @@ const createQuestionSchema = z.object({
   targetSeconds: z.number().int().positive().optional(),
   tags: z.array(z.string()).default([]),
   bloomLevel: z.enum(['remember', 'understand', 'apply', 'analyze']).optional(),
-  status: z.enum(['draft', 'review', 'approved', 'published', 'archived']).default('draft'),
+  status: z.enum(['IMPORTED', 'NEEDS_REVIEW', 'VALIDATED', 'PUBLISHED', 'ARCHIVED', 'REJECTED']).default('IMPORTED'),
   content: z.object({
     prompt: z.string().min(1),
     promptBn: z.string().optional(),
@@ -236,10 +276,12 @@ const createQuestionSchema = z.object({
     sourceType: z.enum(['bcs-official', 'bcs-unofficial', 'curated', 'ai-generated']),
     sourceName: z.string().optional(),
     sourceUrl: z.string().url().optional(),
+    verifiedAt: z.string().datetime().optional(),
+    verifiedBy: z.string().optional(),
   }).optional(),
 })
 
-questionRoutes.post('/', async (c) => {
+questionRoutes.post('/', requireAdmin, async (c) => {
   const body = await c.req.json()
   const parsed = createQuestionSchema.safeParse(body)
 
@@ -266,91 +308,145 @@ questionRoutes.post('/', async (c) => {
   }
 
   // Create question with content, source, and stats in transaction
-  const question = await prisma.$transaction(async (tx) => {
-    const q = await tx.question.create({
-      data: {
-        topicId: data.topicId,
-        subTopicId: data.subTopicId,
-        questionType: data.questionType,
-        difficulty: data.difficulty,
-        targetSeconds: data.targetSeconds ?? data.difficulty * 30 + 10,
-        tags: data.tags,
-        bloomLevel: data.bloomLevel,
-        status: data.status,
-        verificationStatus: 'unverified',
-        contentHash,
-        isCanonical: true,
-        publishedAt: data.status === 'published' ? new Date() : null,
-        content: {
-          create: {
-            prompt: data.content.prompt,
-            promptBn: data.content.promptBn,
-            options: data.content.options,
-            correctIndex: data.content.correctIndex,
-            explanation: data.content.explanation,
-            explanationBn: data.content.explanationBn,
-            detailedExplanation: data.content.detailedExplanation,
+  try {
+    const question = await prisma.$transaction(async (tx) => {
+      const q = await tx.question.create({
+        data: {
+          topicId: data.topicId,
+          subTopicId: data.subTopicId,
+          questionType: data.questionType,
+          difficulty: data.difficulty,
+          targetSeconds: data.targetSeconds ?? data.difficulty * 30 + 10,
+          tags: data.tags,
+          bloomLevel: data.bloomLevel,
+          status: data.status,
+          verificationStatus: 'unverified',
+          contentHash,
+          isCanonical: true,
+          publishedAt: data.status === 'PUBLISHED' ? new Date() : null,
+          content: {
+            create: {
+              prompt: data.content.prompt,
+              promptBn: data.content.promptBn,
+              options: data.content.options,
+              correctIndex: data.content.correctIndex,
+              explanation: data.content.explanation,
+              explanationBn: data.content.explanationBn,
+              detailedExplanation: data.content.detailedExplanation,
+            },
+          },
+          source: data.source ? {
+            create: {
+              examYear: data.source.examYear,
+              questionNumber: data.source.questionNumber,
+              sourceType: data.source.sourceType,
+              sourceName: data.source.sourceName,
+              sourceUrl: data.source.sourceUrl,
+              verifiedAt: data.status === 'PUBLISHED' ? new Date() : null,
+              verifiedBy: c.get('userId') || 'system',
+            },
+          } : undefined,
+          stats: {
+            create: {
+              attemptCount: 0,
+              correctCount: 0,
+              avgTimeSeconds: 0,
+              difficultyRating: 0,
+            },
           },
         },
-        source: data.source ? {
-          create: {
-            examYear: data.source.examYear,
-            questionNumber: data.source.questionNumber,
-            sourceType: data.source.sourceType,
-            sourceName: data.source.sourceName,
-            sourceUrl: data.source.sourceUrl,
-            verifiedAt: data.status === 'published' ? new Date() : null,
-            verifiedBy: c.get('userId') || 'system',
-          },
-        } : undefined,
-        stats: {
-          create: {
-            attemptCount: 0,
-            correctCount: 0,
-            avgTimeSeconds: 0,
-            difficultyRating: 0,
-          },
+        include: {
+          content: true,
+          source: true,
+          stats: true,
+          subTopic: { select: { id: true, name: true } },
         },
-      },
-      include: {
-        content: true,
-        source: true,
-        stats: true,
-        subTopic: { select: { id: true, name: true } },
-      },
+      })
+      return q
     })
-    return q
-  })
-
-  return c.json(question, 201)
+    await cacheDel(cacheKey('questions', question.topicId, question.subTopicId ?? 'any', 'any', 'PUBLISHED'))
+    await cacheDel(cacheKey('question-stats', question.topicId, question.subTopicId ?? 'all'))
+    return c.json(question, 201)
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('Unique constraint failed on the fields: (`contentHash`)')) {
+      return c.json({ error: 'Duplicate question detected', contentHash }, 409)
+    }
+    throw e
+  }
 })
 
 // PATCH /api/questions/:id — Update question (admin)
-questionRoutes.patch('/:id', async (c) => {
+const updateQuestionSchema = z.object({
+  topicId: z.string().optional(),
+  subTopicId: z.string().optional(),
+  questionType: z.enum(['mcq-single', 'mcq-multiple', 'fill-blank']).optional(),
+  difficulty: z.number().int().min(1).max(5).optional(),
+  targetSeconds: z.number().int().positive().optional(),
+  tags: z.array(z.string()).optional(),
+  bloomLevel: z.enum(['remember', 'understand', 'apply', 'analyze']).optional(),
+  status: z.enum(['IMPORTED', 'NEEDS_REVIEW', 'VALIDATED', 'PUBLISHED', 'ARCHIVED', 'REJECTED']).optional(),
+  content: z.object({
+    prompt: z.string().min(1).optional(),
+    promptBn: z.string().optional(),
+    options: z.array(z.object({
+      text: z.string(),
+      textBn: z.string().optional(),
+    })).min(2).optional(),
+    correctIndex: z.number().int().min(0).optional(),
+    explanation: z.string().min(1).optional(),
+    explanationBn: z.string().optional(),
+    detailedExplanation: z.string().optional(),
+  }).optional(),
+  source: z.object({
+    examYear: z.number().int().optional(),
+    questionNumber: z.number().int().optional(),
+    sourceType: z.enum(['bcs-official', 'bcs-unofficial', 'curated', 'ai-generated']).optional(),
+    sourceName: z.string().optional(),
+    sourceUrl: z.string().url().optional(),
+    verifiedAt: z.string().datetime().optional(),
+    verifiedBy: z.string().optional(),
+  }).optional(),
+})
+
+questionRoutes.patch('/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const body = await c.req.json()
+  const parsed = updateQuestionSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return c.json({ error: 'Invalid input', details: parsed.error.flatten() }, 400)
+  }
+
+  const data = parsed.data
 
   // Check question exists
-  const existing = await prisma.question.findUnique({ where: { id } })
+  const existing = await prisma.question.findUnique({
+    where: { id },
+    include: { content: true },
+  })
   if (!existing) {
     return c.json({ error: 'Question not found' }, 404)
   }
 
   // Update question metadata
+  const questionData: Record<string, unknown> = {}
+  if (data.topicId !== undefined) questionData.topicId = data.topicId
+  if (data.subTopicId !== undefined) questionData.subTopicId = data.subTopicId
+  if (data.questionType !== undefined) questionData.questionType = data.questionType
+  if (data.difficulty !== undefined) questionData.difficulty = data.difficulty
+  if (data.targetSeconds !== undefined) questionData.targetSeconds = data.targetSeconds
+  if (data.tags !== undefined) questionData.tags = data.tags
+  if (data.bloomLevel !== undefined) questionData.bloomLevel = data.bloomLevel
+  if (data.status !== undefined) {
+    questionData.status = data.status
+    if (data.status === 'PUBLISHED' && !existing.publishedAt) {
+      questionData.publishedAt = new Date()
+    }
+  }
+
   const question = await prisma.question.update({
     where: { id },
-    data: {
-      topicId: body.topicId,
-      subTopicId: body.subTopicId,
-      questionType: body.questionType,
-      difficulty: body.difficulty,
-      targetSeconds: body.targetSeconds,
-      tags: body.tags,
-      bloomLevel: body.bloomLevel,
-      status: body.status,
-      verificationStatus: body.verificationStatus,
-      publishedAt: body.status === 'published' && !existing.publishedAt ? new Date() : undefined,
-    },
+    data: questionData,
     include: {
       content: true,
       source: true,
@@ -359,61 +455,61 @@ questionRoutes.patch('/:id', async (c) => {
   })
 
   // Update content if provided
-  if (body.content) {
+  if (data.content) {
+    const contentData: Record<string, unknown> = {}
+    if (data.content.prompt !== undefined) contentData.prompt = data.content.prompt
+    if (data.content.promptBn !== undefined) contentData.promptBn = data.content.promptBn
+    if (data.content.options !== undefined) contentData.options = data.content.options
+    if (data.content.correctIndex !== undefined) contentData.correctIndex = data.content.correctIndex
+    if (data.content.explanation !== undefined) contentData.explanation = data.content.explanation
+    if (data.content.explanationBn !== undefined) contentData.explanationBn = data.content.explanationBn
+    if (data.content.detailedExplanation !== undefined) contentData.detailedExplanation = data.content.detailedExplanation
+
     await prisma.questionContent.update({
       where: { questionId: id },
-      data: {
-        prompt: body.content.prompt,
-        promptBn: body.content.promptBn,
-        options: body.content.options,
-        correctIndex: body.content.correctIndex,
-        explanation: body.content.explanation,
-        explanationBn: body.content.explanationBn,
-        detailedExplanation: body.content.detailedExplanation,
-      },
+      data: contentData,
     })
 
     // Create version record
     await prisma.questionVersion.create({
       data: {
-        questionId: id,
-        version: (await prisma.questionVersion.count({ where: { questionId: id } })) + 1,
-        prompt: body.content.prompt,
-        promptBn: body.content.promptBn,
-        options: body.content.options,
-        correctIndex: body.content.correctIndex,
-        explanation: body.content.explanation,
+        questionId: id as string,
+        version: (await prisma.questionVersion.count({ where: { questionId: id as string } })) + 1,
+        prompt: (data.content.prompt ?? existing.content?.prompt) as string,
+        promptBn: data.content.promptBn ?? existing.content?.promptBn ?? null,
+        options: JSON.parse(JSON.stringify(data.content.options ?? existing.content?.options ?? [])),
+        correctIndex: (data.content.correctIndex ?? existing.content?.correctIndex) as number,
+        explanation: (data.content.explanation ?? existing.content?.explanation) as string,
         changedBy: c.get('userId') || 'system',
-        changeReason: body.changeReason,
+        changeReason: data.content.detailedExplanation ? 'Updated with detailed explanation' : 'Updated',
       },
     })
   }
 
   // Update source if provided
-  if (body.source) {
+  if (data.source) {
+    const sourceData: Record<string, unknown> = {}
+    if (data.source.examYear !== undefined) sourceData.examYear = data.source.examYear
+    if (data.source.questionNumber !== undefined) sourceData.questionNumber = data.source.questionNumber
+    if (data.source.sourceType !== undefined) sourceData.sourceType = data.source.sourceType
+    if (data.source.sourceName !== undefined) sourceData.sourceName = data.source.sourceName
+    if (data.source.sourceUrl !== undefined) sourceData.sourceUrl = data.source.sourceUrl
+    if (data.source.verifiedAt !== undefined) {
+      sourceData.verifiedAt = data.source.verifiedAt ? new Date(data.source.verifiedAt) : null
+    }
+    sourceData.verifiedBy = c.get('userId') || 'system'
+
     await prisma.questionSource.upsert({
-      where: { questionId: id },
+      where: { questionId: id as string },
       create: {
-        questionId: id,
-        examYear: body.source.examYear,
-        questionNumber: body.source.questionNumber,
-        sourceType: body.source.sourceType,
-        sourceName: body.source.sourceName,
-        sourceUrl: body.source.sourceUrl,
-        verifiedAt: body.source.verifiedAt ? new Date(body.source.verifiedAt) : null,
-        verifiedBy: body.source.verifiedBy,
-      },
-      update: {
-        examYear: body.source.examYear,
-        questionNumber: body.source.questionNumber,
-        sourceType: body.source.sourceType,
-        sourceName: body.source.sourceName,
-        sourceUrl: body.source.sourceUrl,
-        verifiedAt: body.source.verifiedAt ? new Date(body.source.verifiedAt) : null,
-        verifiedBy: body.source.verifiedBy,
-      },
+        questionId: id as string,
+        ...sourceData,
+      } as Parameters<typeof prisma.questionSource.upsert>[0]['create'],
+      update: sourceData as Parameters<typeof prisma.questionSource.upsert>[0]['update'],
     })
   }
 
+  await cacheDel(cacheKey('questions', question.topicId, question.subTopicId ?? 'any', 'any', 'PUBLISHED'))
+  await cacheDel(cacheKey('question-stats', question.topicId, question.subTopicId ?? 'all'))
   return c.json(question)
 })

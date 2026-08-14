@@ -108,6 +108,8 @@ userRoutes.delete('/me', async (c) => {
 
   await prisma.user.delete({ where: { id: userId } })
 
-  c.header('Set-Cookie', 'token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')
+  const isProd = process.env.NODE_ENV === 'production'
+  const cookieAttrs = `Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isProd ? '; Secure' : ''}`
+  c.header('Set-Cookie', `token=; ${cookieAttrs}`)
   return c.json({ ok: true })
 })

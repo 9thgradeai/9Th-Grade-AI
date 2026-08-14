@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react'
 import type { Question, QuestionAttempt } from '@/lib/types'
 import { Button, Badge } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -60,7 +60,7 @@ export function QuestionRunner({ questions, timed = false, durationSeconds = 0, 
       id: `att_${i}`,
       questionId: question.id,
       selectedIndex: selections[i],
-      correct: question.correctIndex != null ? selections[i] === question.correctIndex : false,
+      correct: false,
       timeSpentSeconds: timePerQ[i],
       confidence: 3,
       answeredAt: new Date().toISOString(),
@@ -156,15 +156,12 @@ export function QuestionRunner({ questions, timed = false, durationSeconds = 0, 
                       'flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-[15px] transition-all',
                       !showState && selected && 'border-accent/50 bg-accent/[0.08]',
                       !showState && !selected && 'border-white/10 bg-white/[0.02] hover:border-white/25',
-                      showState && q.correctIndex != null && i === q.correctIndex && 'border-success/50 bg-success/[0.08]',
-                      showState && selected && i !== q.correctIndex && 'border-danger/50 bg-danger/[0.08]',
                     )}
                   >
                     <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-mono text-xs', selected && !showState ? 'border-accent text-accent-hi' : 'border-white/15 text-faint')}>
                       {String.fromCharCode(65 + i)}
                     </span>
                     {opt}
-                     {showState && q.correctIndex != null && i === q.correctIndex && <Check size={16} className="ml-auto text-success" />}
                   </button>
                 )
               })}

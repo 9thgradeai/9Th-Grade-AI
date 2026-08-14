@@ -15,7 +15,11 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "lint": "oxlint src"
+    "db:deploy": "prisma migrate deploy",
+    "lint": "oxlint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.0",
@@ -37,8 +41,10 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.0",
     "@types/uuid": "^10.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "oxlint": "^1.75.0",
     "tsx": "^4.19.0",
     "typescript": "~5.7.0",
-    "oxlint": "^1.75.0"
+    "vitest": "^4.1.10"
   }
 }

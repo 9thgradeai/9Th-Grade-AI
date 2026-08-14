@@ -25,7 +25,8 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   if (redis) {
     try {
       return (await redis.get<T>(key)) ?? null
-    } catch {
+    } catch (err) {
+      console.warn(`[cache] Redis GET failed for key="${key}", falling back to memory:`, err instanceof Error ? err.message : String(err))
       return null
     }
   }
@@ -43,8 +44,8 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
     try {
       await redis.set(key, value, { ex: ttlSeconds })
       return
-    } catch {
-      /* fall through to memory fallback */
+    } catch (err) {
+      console.warn(`[cache] Redis SET failed for key="${key}", falling back to memory:`, err instanceof Error ? err.message : String(err))
     }
   }
   mem.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
@@ -54,8 +55,8 @@ export async function cacheDel(key: string): Promise<void> {
   if (redis) {
     try {
       await redis.del(key)
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.warn(`[cache] Redis DEL failed for key="${key}":`, err instanceof Error ? err.message : String(err))
     }
   }
   mem.delete(key)

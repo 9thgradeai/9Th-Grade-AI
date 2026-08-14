@@ -145,13 +145,20 @@ export function computeTestResult(
 
 /** Overall percentile of `score` among the exam's existing results. */
 export async function computePercentile(examId: string, score: number): Promise<number> {
-  const all = await prisma.testResult.findMany({
-    where: { test: { examId } },
-    select: { score: true },
-  })
-  if (all.length === 0) return 85
-  const lower = all.filter((r) => r.score < score).length
-  return Math.round((lower / all.length) * 100)
+  const result = await prisma.$queryRaw<
+    { percentile: number | null }[]
+  >`
+    SELECT round(
+      count(*) FILTER (WHERE tr.score < ${score})::numeric /
+      nullif(count(*), 0) * 100
+    )::int as percentile
+    FROM "TestResult" tr
+    JOIN "Test" t ON t.id = tr."testId"
+    WHERE t."examId" = ${examId}
+  `
+  const p = result[0]?.percentile
+  if (p === null || p === undefined) return 85
+  return p
 }
 
 /**
@@ -163,23 +170,55 @@ export async function refreshPerformance(
   examId: string,
   minutes: number,
 ): Promise<void> {
-  const results = await prisma.testResult.findMany({
+  const prev = await prisma.performance.findUnique({
+    where: { userId_examId: { userId, examId } },
+    select: {
+      mastery: true,
+      accuracy: true,
+      speed: true,
+      retention: true,
+      percentile: true,
+      streakDays: true,
+      studyHistory: true,
+      trajectory: true,
+    },
+  })
+
+  const latestResult = await prisma.testResult.findFirst({
     where: { userId, test: { examId } },
-    orderBy: { completedAt: 'asc' },
+    orderBy: { completedAt: 'desc' },
     select: { accuracy: true, speed: true, retention: true, percentile: true, completedAt: true },
   })
 
-  const n = Math.max(results.length, 1)
-  const avg = (pick: (r: (typeof results)[number]) => number) =>
-    Math.round(results.reduce((s, r) => s + pick(r), 0) / n)
-  const accuracy = avg((r) => r.accuracy)
-  const speed = avg((r) => r.speed)
-  const retention = avg((r) => r.retention)
-  const percentile = Math.round(avg((r) => r.percentile))
+  if (!latestResult) return
+
+  const prevCount = await prisma.testResult.count({
+    where: { userId, test: { examId } },
+  })
+
+  const prevAccuracy = prev?.accuracy ?? 0
+  const prevSpeed = prev?.speed ?? 0
+  const prevRetention = prev?.retention ?? 0
+  const prevPercentile = prev?.percentile ?? 0
+
+  const accuracy = prevCount > 1
+    ? Math.round((prevAccuracy * (prevCount - 1) + latestResult.accuracy) / prevCount)
+    : latestResult.accuracy
+  const speed = prevCount > 1
+    ? Math.round((prevSpeed * (prevCount - 1) + latestResult.speed) / prevCount)
+    : latestResult.speed
+  const retention = prevCount > 1
+    ? Math.round((prevRetention * (prevCount - 1) + latestResult.retention) / prevCount)
+    : latestResult.retention
+  const percentile = prevCount > 1
+    ? Math.round((prevPercentile * (prevCount - 1) + latestResult.percentile) / prevCount)
+    : latestResult.percentile
   const mastery = round(clamp(accuracy * 0.4 + speed * 0.3 + retention * 0.3, 0, 100))
   const potentialScore = round(clamp(percentile + 5, 0, 100))
 
-  const trajectory = results.map((r) => r.accuracy).slice(-12)
+  const newTrajectoryPoint = latestResult.accuracy
+  const prevTrajectory = prev?.trajectory ? JSON.parse(prev.trajectory as string) as number[] : []
+  const trajectory = [...prevTrajectory.slice(-11), newTrajectoryPoint]
 
   // Aggregate study minutes by day for the trailing week.
   const since = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
@@ -207,10 +246,6 @@ export async function refreshPerformance(
   }
 
   // Phase 6: fire a milestone event on a new 7-day-multiple streak.
-  const prev = await prisma.performance.findUnique({
-    where: { userId_examId: { userId, examId } },
-    select: { streakDays: true },
-  })
   if (streak > 0 && streak % 7 === 0 && (prev?.streakDays ?? 0) < streak) {
     realtime.publishToUser(userId, 'streak:milestone', { streakDays: streak })
   }

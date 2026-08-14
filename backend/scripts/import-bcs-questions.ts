@@ -83,11 +83,12 @@ const QUESTION_TYPE_MAP: Record<string, string> = {
 
 // Status mapping
 const STATUS_MAP: Record<string, string> = {
-  'needs_review': 'review',
-  'approved': 'approved',
-  'published': 'published',
-  'draft': 'draft',
-  'archived': 'archived',
+  'needs_review': 'NEEDS_REVIEW',
+  'approved': 'VALIDATED',
+  'published': 'PUBLISHED',
+  'draft': 'IMPORTED',
+  'archived': 'ARCHIVED',
+  'rejected': 'REJECTED',
 };
 
 function computeContentHash(prompt: string, options: string[]): string {
@@ -195,22 +196,12 @@ async function importQuestions(jsonlPath: string): Promise<{
 
       // Check for existing question by contentHash or external_id
       const existingByHash = await prisma.question.findFirst({ where: { contentHash } });
-      const existingByExternal = await prisma.question.findFirst({ where: { id: q.external_id } });
+      const _existingByExternal = await prisma.question.findFirst({ where: { id: q.external_id } });
 
       if (existingByHash) {
-        // Update existing question if it's a duplicate
-        await prisma.question.update({
-          where: { id: existingByHash.id },
-          data: {
-            canonicalId: existingByHash.id,
-            isCanonical: false,
-            status: 'published',
-            verificationStatus: 'verified',
-          },
-        });
-        results.skipped++;
-        results.details.push(`Duplicate (hash): ${q.external_id} -> ${existingByHash.id}`);
-        continue;
+        results.skipped++
+        results.details.push(`Duplicate (hash): ${q.external_id} -> ${existingByHash.id}`)
+        continue
       }
 
       // Determine difficulty (1-5)
@@ -220,113 +211,117 @@ async function importQuestions(jsonlPath: string): Promise<{
       const questionType = QUESTION_TYPE_MAP[q.question_type] || 'mcq-single';
 
       // Determine status
-      const status = STATUS_MAP[q.status] || 'review';
+      const status = STATUS_MAP[q.status] || 'IMPORTED';
 
       // Explanation
       const explanation = q.explanation || q.solution || 'No explanation provided.';
 
       // Upsert question (metadata only - content is in QuestionContent)
-      const question = await prisma.question.upsert({
-        where: { id: q.external_id },
-        update: {
-          topicId,
-          subTopicId,
-          questionType,
-          difficulty,
-          targetSeconds: difficulty * 30 + 10,
-          tags: [q.subject.toLowerCase().replace(/\s+/g, '-')],
-          bloomLevel: 'understand', // default
-          status,
-          verificationStatus: q.explanation ? 'verified' : 'unverified',
-          contentHash,
-          canonicalId: null,
-          isCanonical: true,
-          publishedAt: status === 'published' ? new Date() : null,
-        },
-        create: {
-          id: q.external_id,
-          topicId,
-          subTopicId,
-          questionType,
-          difficulty,
-          targetSeconds: difficulty * 30 + 10,
-          tags: [q.subject.toLowerCase().replace(/\s+/g, '-')],
-          bloomLevel: 'understand',
-          status,
-          verificationStatus: q.explanation ? 'verified' : 'unverified',
-          contentHash,
-          isCanonical: true,
-          publishedAt: status === 'published' ? new Date() : null,
-        },
-      });
+      await prisma.$transaction(async (tx) => {
+        const question = await tx.question.upsert({
+          where: { id: q.external_id },
+          update: {
+            topicId,
+            subTopicId,
+            questionType,
+            difficulty,
+            targetSeconds: difficulty * 30 + 10,
+            tags: [q.subject.toLowerCase().replace(/\s+/g, '-')],
+            bloomLevel: 'understand', // default
+            status,
+            verificationStatus: q.explanation ? 'verified' : 'unverified',
+            contentHash,
+            canonicalId: null,
+            isCanonical: true,
+            publishedAt: status === 'published' ? new Date() : null,
+          },
+          create: {
+            id: q.external_id,
+            topicId,
+            subTopicId,
+            questionType,
+            difficulty,
+            targetSeconds: difficulty * 30 + 10,
+            tags: [q.subject.toLowerCase().replace(/\s+/g, '-')],
+            bloomLevel: 'understand',
+            status,
+            verificationStatus: q.explanation ? 'verified' : 'unverified',
+            contentHash,
+            isCanonical: true,
+            publishedAt: status === 'published' ? new Date() : null,
+          },
+        });
 
-      // Upsert QuestionContent (contains actual question content)
-      await prisma.questionContent.upsert({
-        where: { questionId: question.id },
-        update: {
-          prompt: q.question_text,
-          promptBn: q.question_text, // Same for now, could be translated
-          options: q.options.map(o => ({ text: o.text, textBn: o.text })),
-          correctIndex,
-          explanation,
-          explanationBn: explanation,
-          detailedExplanation: q.solution || null,
-        },
-        create: {
-          questionId: question.id,
-          prompt: q.question_text,
-          promptBn: q.question_text,
-          options: q.options.map(o => ({ text: o.text, textBn: o.text })),
-          correctIndex,
-          explanation,
-          explanationBn: explanation,
-          detailedExplanation: q.solution || null,
-        },
-      });
+        await tx.questionContent.upsert({
+          where: { questionId: question.id },
+          update: {
+            prompt: q.question_text,
+            promptBn: q.question_text, // Same for now, could be translated
+            options: q.options.map(o => ({ text: o.text, textBn: o.text })),
+            correctIndex,
+            explanation,
+            explanationBn: explanation,
+            detailedExplanation: q.solution || null,
+          },
+          create: {
+            questionId: question.id,
+            prompt: q.question_text,
+            promptBn: q.question_text,
+            options: q.options.map(o => ({ text: o.text, textBn: o.text })),
+            correctIndex,
+            explanation,
+            explanationBn: explanation,
+            detailedExplanation: q.solution || null,
+          },
+        });
 
-      // Upsert QuestionSource
-      await prisma.questionSource.upsert({
-        where: { questionId: question.id },
-        update: {
-          examYear: 50,
-          questionNumber: parseInt(q.source.question_no.replace(/[^\d]/g, ''), 10) || null,
-          sourceType: 'bcs-official',
-          sourceName: q.source.exam_name,
-          sourceUrl: null,
-          verifiedAt: q.explanation ? new Date() : null,
-          verifiedBy: 'system',
-        },
-        create: {
-          questionId: question.id,
-          examYear: 50,
-          questionNumber: parseInt(q.source.question_no.replace(/[^\d]/g, ''), 10) || null,
-          sourceType: 'bcs-official',
-          sourceName: q.source.exam_name,
-          sourceUrl: null,
-          verifiedAt: q.explanation ? new Date() : null,
-          verifiedBy: 'system',
-        },
-      });
+        await tx.questionSource.upsert({
+          where: { questionId: question.id },
+          update: {
+            examYear: 50,
+            questionNumber: parseInt(q.source.question_no.replace(/[^\d]/g, ''), 10) || null,
+            sourceType: 'bcs-official',
+            sourceName: q.source.exam_name,
+            sourceUrl: null,
+            verifiedAt: q.explanation ? new Date() : null,
+            verifiedBy: 'system',
+          },
+          create: {
+            questionId: question.id,
+            examYear: 50,
+            questionNumber: parseInt(q.source.question_no.replace(/[^\d]/g, ''), 10) || null,
+            sourceType: 'bcs-official',
+            sourceName: q.source.exam_name,
+            sourceUrl: null,
+            verifiedAt: q.explanation ? new Date() : null,
+            verifiedBy: 'system',
+          },
+        });
 
-      // Ensure QuestionStats exists
-      await prisma.questionStats.upsert({
-        where: { questionId: question.id },
-        update: {},
-        create: {
-          questionId: question.id,
-          attemptCount: 0,
-          correctCount: 0,
-          avgTimeSeconds: 0,
-          difficultyRating: 0,
-        },
-      });
+        await tx.questionStats.upsert({
+          where: { questionId: question.id },
+          update: {},
+          create: {
+            questionId: question.id,
+            attemptCount: 0,
+            correctCount: 0,
+            avgTimeSeconds: 0,
+            difficultyRating: 0,
+          },
+        });
+      })
 
       results.imported++;
       results.details.push(`Imported: ${q.external_id} (${q.subject})`);
 
     } catch (e) {
-      results.errors++;
-      results.details.push(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      if (e instanceof Error && e.message.includes('Unique constraint failed on the fields: (`contentHash`)')) {
+        results.skipped++
+        results.details.push(`Duplicate (hash): ${q.external_id}`)
+        continue
+      }
+      results.errors++
+      results.details.push(`Error: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 

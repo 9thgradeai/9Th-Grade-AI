@@ -38,7 +38,7 @@ export const questionListParamsSchema = z.object({
   ).optional(),
   subTopicId: z.string().optional(),
   status: z
-    .enum(['draft', 'review', 'approved', 'published', 'archived'])
+    .enum(['IMPORTED', 'NEEDS_REVIEW', 'VALIDATED', 'PUBLISHED', 'ARCHIVED', 'REJECTED'])
     .optional()
 });
 
@@ -114,7 +114,7 @@ export const testSubmitPayloadSchema = z.object({
    limit?: number
    offset?: number
    subTopicId?: string
-   status?: 'draft' | 'review' | 'approved' | 'published' | 'archived'
+    status?: 'IMPORTED' | 'NEEDS_REVIEW' | 'VALIDATED' | 'PUBLISHED' | 'ARCHIVED' | 'REJECTED'
  } {
    try {
      return questionListParamsSchema.parse(params);

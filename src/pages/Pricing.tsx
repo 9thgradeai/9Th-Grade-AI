@@ -10,23 +10,7 @@ const plans = [
     tag: 'Start mapping your universe',
     features: ['Diagnostic assessment', 'Basic preparation blueprint', '20 questions / day', 'Weekly AI briefing'],
     cta: 'Start free',
-    highlight: false,
-  },
-  {
-    name: 'Strategist',
-    price: '৳499/mo',
-    tag: 'For serious aspirants',
-    features: ['Full adaptive practice', 'Personalized daily mission', 'Memory engine & revision', 'Performance intelligence', 'Unlimited AI tutor', 'Mock simulations'],
-    cta: 'Build my system',
     highlight: true,
-  },
-  {
-    name: 'Commander',
-    price: '৳899/mo',
-    tag: 'Complete command center',
-    features: ['Everything in Strategist', 'Rank & percentile tracking', 'Priority weak-topic targeting', '1:1 AI strategy reviews', 'Exam-readiness trajectory'],
-    cta: 'Take command',
-    highlight: false,
   },
 ]
 
@@ -40,10 +24,10 @@ export default function Pricing() {
         <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
           Invest in the system, <span className="text-gradient-accent font-display">not the hours.</span>
         </h1>
-        <p className="mt-4 text-muted">Plans shown for illustration. Start free — upgrade when your preparation demands it.</p>
+        <p className="mt-4 text-muted">Start free — upgrade when your preparation demands it.</p>
       </motion.div>
 
-      <div className="mt-14 grid gap-5 lg:grid-cols-3">
+      <div className="mt-14 grid gap-5 lg:grid-cols-1">
         {plans.map((p, i) => (
           <motion.div
             key={p.name}
@@ -55,11 +39,6 @@ export default function Pricing() {
               p.highlight ? 'border-accent/40 bg-accent/[0.06] ring-glow' : 'border-white/8 bg-white/[0.03]',
             )}
           >
-            {p.highlight && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-accent to-violet px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
-                Recommended
-              </span>
-            )}
             <h3 className="text-lg font-semibold text-ink">{p.name}</h3>
             <p className="mt-1 text-xs text-faint">{p.tag}</p>
             <div className="mt-4 font-mono text-3xl font-semibold tracking-tight text-ink">{p.price}</div>

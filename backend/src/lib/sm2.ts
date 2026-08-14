@@ -68,14 +68,16 @@ export function isOverdue(nextReview: Date, now = Date.now()): boolean {
  * `forceDue` marks items due immediately (nextReview = now).
  */
 export async function ensureRevisionItems(userId: string, topicIds: string[], forceDue = true): Promise<void> {
-  for (const topicId of topicIds) {
-    const now = new Date()
-    await prisma.revisionItem.upsert({
-      where: { userId_topicId: { userId, topicId } },
-      update: forceDue ? { nextReview: now } : {},
-      create: { userId, topicId, nextReview: now, memoryStrength: 50 },
-    })
-  }
+  const now = new Date()
+  await prisma.$transaction(
+    topicIds.map((topicId) =>
+      prisma.revisionItem.upsert({
+        where: { userId_topicId: { userId, topicId } },
+        update: forceDue ? { nextReview: now } : {},
+        create: { userId, topicId, nextReview: now, memoryStrength: 50 },
+      }),
+    ),
+  )
 }
 
 /** Seed a user's schedule from their weakest engaged topics if empty. */

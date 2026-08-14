@@ -11,9 +11,6 @@ import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
    diagnosis. The rule-based engine in lib/ai is the single source
    of truth; an LLM provider can replace it later without touching
    this layer.
-
-   The whole surface (/strategy, /strategy/*, /ai/*) is a paid
-   feature — gated behind `ai-strategy`.
    ============================================================ */
 
 export const strategyRoutes = new Hono<AppEnv>()

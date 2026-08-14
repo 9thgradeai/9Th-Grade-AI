@@ -11,6 +11,7 @@
 import { prisma } from '../app'
 import { ensureRevisionItems } from './sm2'
 import { realtime } from './realtime'
+import { sendEmail } from './email'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -81,9 +82,17 @@ export async function buildRoadmap(opts: {
   targetMastery?: number
 }): Promise<RoadmapData> {
   const { userId, examId, examName, examDate, targetMastery = 90 } = opts
-  const perf = await prisma.performance.findUnique({
-    where: { userId_examId: { userId, examId } },
-  })
+  const [perf, userSubjects] = await Promise.all([
+    prisma.performance.findUnique({
+      where: { userId_examId: { userId, examId } },
+    }),
+    prisma.userSubject.findMany({
+      where: { userId, examId },
+      include: { subject: true },
+      orderBy: { accuracy: 'asc' },
+      take: 3,
+    }),
+  ])
   const currentMastery = perf?.mastery ?? 0
 
   const daysRemaining = Math.max(1, Math.ceil((examDate.getTime() - Date.now()) / DAY_MS))
@@ -92,12 +101,6 @@ export async function buildRoadmap(opts: {
   const dailyEffortMinutes = daysRemaining > 120 ? 45 : daysRemaining > 60 ? 60 : daysRemaining > 30 ? 75 : 90
 
   // Priorities = weakest subjects (lowest mastery/accuracy first).
-  const userSubjects = await prisma.userSubject.findMany({
-    where: { userId, examId },
-    include: { subject: true },
-    orderBy: { accuracy: 'asc' },
-    take: 3,
-  })
   const priorities =
     userSubjects.length > 0
       ? userSubjects.map((us) => `${us.subject.name} (${us.accuracy}% accuracy)`)
@@ -235,14 +238,16 @@ interface ClassifiedError {
 }
 
 export async function diagnoseTest(testId: string, userId: string): Promise<DiagnosisInput & { modes: Record<string, number> }> {
-  const attempts = await prisma.questionAttempt.findMany({
-    where: { testId },
-    include: { question: { include: { topic: { include: { subject: true } } } } },
-  })
-  const test = await prisma.test.findUnique({
-    where: { id: testId },
-    include: { result: true },
-  })
+  const [attempts, test] = await Promise.all([
+    prisma.questionAttempt.findMany({
+      where: { testId },
+      include: { question: { include: { topic: { include: { subject: true } } } } },
+    }),
+    prisma.test.findUnique({
+      where: { id: testId },
+      include: { result: true },
+    }),
+  ])
 
   const modes: Record<string, number> = { 'concept-gap': 0, 'time-pressure': 0, careless: 0, 'difficulty-gap': 0 }
   const classified: ClassifiedError[] = []
@@ -337,8 +342,18 @@ export async function diagnoseTest(testId: string, userId: string): Promise<Diag
 
   await prisma.aIRecommendation.createMany({ data: recs })
 
-  // Phase 6: notify the user's open connections of fresh recommendations.
+  // Notify the user's open connections of fresh recommendations.
   realtime.publishToUser(userId, 'recommendation:new', { count: recs.length })
+
+  // Enqueue summary email as a background job.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
+  if (user) {
+    void sendEmail({
+      to: user.email,
+      subject: `${recs.length} new AI recommendations for you`,
+      text: `Hi ${user.name || 'there'},\n\nYou have ${recs.length} new recommendations based on your recent performance.\n\n— The 9Th-Grade AI team`,
+    })
+  }
 
   return {
     testId,

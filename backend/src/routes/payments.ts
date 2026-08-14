@@ -3,19 +3,33 @@ import { z } from 'zod'
 import Stripe from 'stripe'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
+import { Context } from 'hono'
 import { getAccess, type Plan } from '../lib/subscription'
 
 /* ============================================================
-   Payments routes (Phase 5).
-   Uses Stripe when STRIPE_SECRET_KEY is configured. Without a key it
-   runs in a clearly-labelled mock mode so the flow is testable in
-   development — swap in real keys to go live (no code changes).
-   ============================================================ */
+    Payments routes (Phase 5).
+    Uses Stripe when STRIPE_SECRET_KEY is configured. Without a key it
+    runs in a clearly-labelled mock mode so the flow is testable in
+    development — swap in real keys to go live (no code changes).
+
+    CRITICAL: In production, payment endpoints MUST fail closed if
+    Stripe is not configured. Mock mode is development-only.
+    ============================================================ */
 
 const stripeKey = process.env.STRIPE_SECRET_KEY
 const stripe = stripeKey ? new Stripe(stripeKey) : null
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 const MOCK = !stripe
+const isProd = process.env.NODE_ENV === 'production'
+
+function requireStripe(): Stripe | null {
+  if (!stripe) {
+    if (isProd) {
+      throw new Error('Payment system is not configured. Contact support.')
+    }
+  }
+  return stripe
+}
 
 export const paymentsRoutes = new Hono<AppEnv>()
 
@@ -45,21 +59,21 @@ paymentsRoutes.post('/checkout', async (c) => {
   }
   const plan = parsed.data.plan as Plan
 
-  if (!stripe) {
-    // Mock mode — no real charge; activation happens via the webhook.
+  const activeStripe = requireStripe()
+  if (!activeStripe) {
     return c.json({
       mock: true,
       sessionId: `mock_${plan}_${userId}`,
       url: null,
       plan,
       note: 'No STRIPE_SECRET_KEY set — checkout is simulated.',
-    })
+    }, 200)
   }
 
   let sub = await prisma.subscription.findUnique({ where: { userId } })
   let customerId = sub?.stripeCustomerId
   if (!customerId) {
-    const customer = await stripe.customers.create({ email, metadata: { userId } })
+    const customer = await activeStripe.customers.create({ email, metadata: { userId } })
     customerId = customer.id
   }
   const priceId = process.env.STRIPE_PRICE_PRO
@@ -67,7 +81,7 @@ paymentsRoutes.post('/checkout', async (c) => {
     return c.json({ error: 'STRIPE_PRICE_PRO is not configured' }, 500)
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await activeStripe.checkout.sessions.create({
     mode: 'subscription',
     client_reference_id: userId,
     customer: customerId,
@@ -93,8 +107,9 @@ paymentsRoutes.post('/cancel', async (c) => {
   const sub = await prisma.subscription.findUnique({ where: { userId } })
   if (!sub) return c.json({ error: 'No subscription to cancel' }, 404)
 
-  if (stripe && sub.stripeSubscriptionId) {
-    await stripe.subscriptions.cancel(sub.stripeSubscriptionId)
+  const activeStripe = requireStripe()
+  if (activeStripe && sub.stripeSubscriptionId) {
+    await activeStripe.subscriptions.cancel(sub.stripeSubscriptionId)
   }
 
   const updated = await prisma.subscription.update({
@@ -113,20 +128,29 @@ export const webhookRoute = new Hono()
 webhookRoute.post('/', async (c) => {
   const raw = await c.req.raw.text()
 
-  let event: Stripe.Event
-  if (stripe && webhookSecret) {
-    const signature = c.req.header('stripe-signature')
-    if (!signature) return c.json({ error: 'Missing stripe-signature header' }, 400)
-    try {
-      event = stripe.webhooks.constructEvent(raw, signature, webhookSecret)
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err)
-      return c.json({ error: 'Invalid signature' }, 400)
+  if (!stripe) {
+    if (isProd) {
+      return c.json({ error: 'Payment system is not configured' }, 500)
     }
-  } else {
-    event = JSON.parse(raw) as Stripe.Event // mock / unverified mode
+    console.warn('[payments] Webhook received in mock mode — signature verification bypassed. Set STRIPE_SECRET_KEY in production.')
+    const event = JSON.parse(raw) as Stripe.Event
+    return processWebhookEvent(c, event)
   }
 
+  const signature = c.req.header('stripe-signature')
+  if (!signature) return c.json({ error: 'Missing stripe-signature header' }, 400)
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(raw, signature, webhookSecret!)
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err)
+    return c.json({ error: 'Invalid signature' }, 400)
+  }
+
+  return processWebhookEvent(c, event)
+})
+
+async function processWebhookEvent(c: Context, event: Stripe.Event): Promise<Response> {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
@@ -176,7 +200,7 @@ webhookRoute.post('/', async (c) => {
   }
 
   return c.json({ received: true })
-})
+}
 
 /** A 30-day cycle as the subscription period end (Stripe would supply the
     exact timestamp; this vendored typings build omits the field, and mock

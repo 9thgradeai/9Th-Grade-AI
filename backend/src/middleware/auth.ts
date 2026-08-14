@@ -1,11 +1,12 @@
 import { Context, Next } from 'hono'
 import jwt from 'jsonwebtoken'
+import { createHash } from 'node:crypto'
 import type { AppEnv } from '../types/env'
 
 /* ============================================================
-   Auth middleware — verifies JWT from cookie or header.
-   Attaches userId to context for downstream handlers.
-   ============================================================ */
+    Auth middleware — verifies JWT from cookie or header.
+    Attaches userId to context for downstream handlers.
+    ============================================================ */
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this'
 
@@ -31,6 +32,11 @@ export function verifyToken(token: string): AuthUser | null {
   } catch {
     return null
   }
+}
+
+/** SHA-256 hash of a token for safe storage. */
+export function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
 }
 
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {

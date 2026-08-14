@@ -199,7 +199,8 @@ model Question {
   bloomLevel       String?                          // 'remember' | 'understand' | 'apply' | 'analyze'
 
   // Quality & Status
-  status           String   @default("draft")       // 'draft' | 'review' | 'approved' | 'published' | 'archived'
+  // Lifecycle: IMPORTED → NEEDS_REVIEW → VALIDATED → PUBLISHED → ARCHIVED → REJECTED
+  status           String   @default("IMPORTED")
   verificationStatus String @default("unverified")  // 'unverified' | 'verified' | 'disputed'
 
   // Deduplication
@@ -225,6 +226,7 @@ model Question {
   @@index([subTopicId])
   @@index([status])
   @@index([contentHash])
+  @@unique([contentHash])
   @@index([canonicalId])
   @@index([difficulty])
   @@index([topicId, status, difficulty])
@@ -341,6 +343,7 @@ model QuestionAttempt {
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([testId])
+  @@unique([testId, questionId])
 }
 
 // ─── Results & Performance ─────────────────────────────────

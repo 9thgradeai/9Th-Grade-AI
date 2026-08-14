@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Clock, Sparkles } from 'lucide-react'
-import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
 import { QuestionRunner } from '@/components/exam/QuestionRunner'
 import { Skeleton, Signal } from '@/components/ui'
@@ -14,7 +13,6 @@ export default function MockTest() {
   const [started, setStarted] = useState(false)
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [loadError, setLoadError] = useState(false)
-  const { data: pref } = useAsync(() => api.getPerformance())
 
   useEffect(() => {
     let active = true
@@ -31,31 +29,32 @@ export default function MockTest() {
     }
   }, [id])
 
-  function onFinish(attempts: QuestionAttempt[]) {
-    const correct = attempts.filter((a) => a.correct).length
-    const total = attempts.length
-    const accuracy = total ? Math.round((correct / total) * 100) : 0
-    const result: TestResult = {
-      id: `res_mock_${id}`,
-      testId: id ?? 'mock',
-      score: accuracy,
-      accuracy,
-      speed: Math.round((pref?.speed ?? 76) * 0.92),
-      retention: Math.round(accuracy * 0.9),
-      percentile: Math.round(50 + accuracy * 0.5),
-      correct,
-      total,
-      timeSpentMinutes: 42,
-      attempts,
-      losses: { Mathematics: 12, English: 6, 'International Affairs': 4 },
-      diagnosis:
-        'Your mathematics errors are concentrated around percentage-based problems. You answer quickly but frequently slip the final computation.',
-      nextBestAction: 'Complete a targeted Percentage + Profit/Loss session before the next mock.',
-      targetTopicId: 't_profit',
-      completedAt: new Date().toISOString(),
+  async function onFinish(attempts: QuestionAttempt[]) {
+    try {
+      const { result } = await api.gradeAttempts(attempts)
+      const final: TestResult = {
+        id: `res_mock_${id}`,
+        testId: id ?? 'mock',
+        score: result.score,
+        accuracy: result.accuracy,
+        speed: result.speed,
+        retention: result.retention,
+        percentile: result.percentile,
+        correct: result.correct,
+        total: result.total,
+        timeSpentMinutes: result.timeSpentMinutes,
+        attempts,
+        losses: result.losses,
+        diagnosis: result.diagnosis,
+        nextBestAction: result.nextBestAction,
+        targetTopicId: 't_profit',
+        completedAt: new Date().toISOString(),
+      }
+      saveResult(final)
+      navigate(`/results/${final.id}`)
+    } catch (e) {
+      console.error('Grading failed:', e)
     }
-    saveResult(result)
-    navigate(`/results/${result.id}`)
   }
 
   // Pre-start screen

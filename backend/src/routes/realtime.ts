@@ -17,6 +17,7 @@ realtimeRoutes.get('/events', (c) => {
 
   let cleanup: (() => void) | null = null
   let heartbeat: ReturnType<typeof setInterval> | null = null
+  let redisPoll: ReturnType<typeof setInterval> | null = null
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -32,10 +33,19 @@ realtimeRoutes.get('/events', (c) => {
       heartbeat = setInterval(() => {
         controller.enqueue(encoder.encode(`: ping\n\n`))
       }, 25000)
+
+      // Poll Redis for cross-instance events every 2 seconds.
+      redisPoll = setInterval(async () => {
+        const frames = await realtime.drainRedisEvents(userId)
+        for (const frame of frames) {
+          controller.enqueue(encoder.encode(`event: message\ndata: ${frame}\n\n`))
+        }
+      }, 2000)
     },
     cancel() {
       if (cleanup) cleanup()
       if (heartbeat) clearInterval(heartbeat)
+      if (redisPoll) clearInterval(redisPoll)
     },
   })
 
