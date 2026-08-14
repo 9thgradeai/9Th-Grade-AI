@@ -60,7 +60,7 @@ export function QuestionRunner({ questions, timed = false, durationSeconds = 0, 
       id: `att_${i}`,
       questionId: question.id,
       selectedIndex: selections[i],
-      correct: selections[i] === question.correctIndex,
+      correct: question.correctIndex != null ? selections[i] === question.correctIndex : false,
       timeSpentSeconds: timePerQ[i],
       confidence: 3,
       answeredAt: new Date().toISOString(),
@@ -156,7 +156,7 @@ export function QuestionRunner({ questions, timed = false, durationSeconds = 0, 
                       'flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-[15px] transition-all',
                       !showState && selected && 'border-accent/50 bg-accent/[0.08]',
                       !showState && !selected && 'border-white/10 bg-white/[0.02] hover:border-white/25',
-                      showState && i === q.correctIndex && 'border-success/50 bg-success/[0.08]',
+                      showState && q.correctIndex != null && i === q.correctIndex && 'border-success/50 bg-success/[0.08]',
                       showState && selected && i !== q.correctIndex && 'border-danger/50 bg-danger/[0.08]',
                     )}
                   >
@@ -164,7 +164,7 @@ export function QuestionRunner({ questions, timed = false, durationSeconds = 0, 
                       {String.fromCharCode(65 + i)}
                     </span>
                     {opt}
-                    {showState && i === q.correctIndex && <Check size={16} className="ml-auto text-success" />}
+                     {showState && q.correctIndex != null && i === q.correctIndex && <Check size={16} className="ml-auto text-success" />}
                   </button>
                 )
               })}

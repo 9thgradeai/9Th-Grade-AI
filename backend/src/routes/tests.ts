@@ -32,9 +32,24 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /** Strip answer data before sending questions to the client. */
-function sanitize<T extends { correctIndex?: number; explanation?: string }>(q: T) {
-  const { correctIndex: _c, explanation: _e, ...safe } = q
-  return safe
+function sanitize(q: {
+  id: string
+  topicId: string
+  difficulty: number
+  targetSeconds: number
+  content?: { correctIndex?: number; explanation?: string; prompt?: string; promptBn?: string; options?: unknown } | null
+  [key: string]: unknown
+}) {
+  const { content, ...safe } = q
+  const base: Record<string, unknown> = { ...safe }
+  if (content) {
+    base.prompt = content.prompt
+    base.promptBn = content.promptBn
+    base.options = Array.isArray(content.options)
+      ? (content.options as Record<string, string>[]).map((o) => o.text ?? o)
+      : content.options
+  }
+  return base
 }
 
 const buildSchema = z.object({

@@ -50,18 +50,18 @@ questionRoutes.get('/:topicId', async (c) => {
     }),
   ])
 
-  // Sanitize: remove correctIndex and explanation from client response
+  // Sanitize: flatten content fields and remove sensitive answer data
   const sanitizedQuestions = questions.map((q) => {
     const { content, ...rest } = q
-    return {
-      ...rest,
-      content: content ? {
-        prompt: content.prompt,
-        promptBn: content.promptBn,
-        options: content.options,
-        // correctIndex and explanation intentionally omitted
-      } : null,
+    const base: Record<string, unknown> = { ...rest }
+    if (content) {
+      base.prompt = content.prompt
+      base.promptBn = content.promptBn
+      base.options = Array.isArray(content.options)
+        ? content.options.map((o) => (typeof o === 'object' && o && 'text' in o ? (o as Record<string, string>).text : String(o)))
+        : content.options
     }
+    return base
   })
 
   const body = { total, offset, limit, questions: sanitizedQuestions }
@@ -300,7 +300,7 @@ questionRoutes.post('/', async (c) => {
             sourceName: data.source.sourceName,
             sourceUrl: data.source.sourceUrl,
             verifiedAt: data.status === 'published' ? new Date() : null,
-            verifiedBy: c.get('user')?.id || 'system',
+            verifiedBy: c.get('userId') || 'system',
           },
         } : undefined,
         stats: {
@@ -383,7 +383,7 @@ questionRoutes.patch('/:id', async (c) => {
         options: body.content.options,
         correctIndex: body.content.correctIndex,
         explanation: body.content.explanation,
-        changedBy: c.get('user')?.id || 'system',
+        changedBy: c.get('userId') || 'system',
         changeReason: body.changeReason,
       },
     })

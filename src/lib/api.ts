@@ -170,8 +170,8 @@ interface RawQuestion {
   topicId: string
   prompt: string
   options: string[]
-  correctIndex: number
-  explanation: string
+  correctIndex?: number
+  explanation?: string
   difficulty: number
   targetSeconds: number
 }

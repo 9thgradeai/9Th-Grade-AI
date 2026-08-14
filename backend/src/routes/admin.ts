@@ -54,12 +54,15 @@ adminRoutes.post('/questions', async (c) => {
   const question = await prisma.question.create({
     data: {
       topicId: d.topicId,
-      prompt: d.prompt,
-      promptBn: d.promptBn,
-      options: d.options,
-      optionsBn: d.optionsBn ?? [],
-      correctIndex: d.correctIndex,
-      explanation: d.explanation,
+      content: {
+        create: {
+          prompt: d.prompt,
+          promptBn: d.promptBn,
+          options: d.options.map((opt) => ({ text: opt, textBn: opt })),
+          correctIndex: d.correctIndex,
+          explanation: d.explanation,
+        },
+      },
       difficulty: d.difficulty ?? 2,
       targetSeconds: d.targetSeconds ?? 40,
       tags: d.tags ?? [],
