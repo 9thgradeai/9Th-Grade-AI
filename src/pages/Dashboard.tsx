@@ -4,7 +4,6 @@ import { ArrowRight } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { useOnline } from '@/lib/useOnline'
 import { api } from '@/lib/api'
-import { isFeatureLocked } from '@/lib/client'
 import { Card, Signal } from '@/components/ui'
 import { AsyncGate } from '@/components/ui/AsyncGate'
 import { AIBriefingCard } from '@/components/dashboard'
@@ -80,16 +79,9 @@ export default function Dashboard() {
 
         {/* AI briefing / strategy */}
         <div className="space-y-4">
-          {isFeatureLocked(briefing.errorObject) ? (
-            <Card className="p-5">
-              <Signal tone="accent">AI Briefing</Signal>
-              <p className="mt-3 text-sm text-muted">Upgrade to unlock your daily AI briefing.</p>
-            </Card>
-          ) : (
-            <AsyncGate loading={briefing.loading} error={briefing.error} data={briefing.data} onRetry={briefing.reload} offline={!online}>
-              {(b) => <AIBriefingCard briefing={b} />}
-            </AsyncGate>
-          )}
+          <AsyncGate loading={briefing.loading} error={briefing.error} data={briefing.data} onRetry={briefing.reload} offline={!online}>
+            {(b) => <AIBriefingCard briefing={b} />}
+          </AsyncGate>
         </div>
       </div>
 

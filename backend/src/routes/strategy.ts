@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
 import { rateLimit } from '../middleware/rateLimit'
-import { requireFeature } from '../middleware/featureGate'
 import { cacheGet, cacheSet, cacheDel, cacheKey } from '../lib/cache'
 import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
 
@@ -18,13 +17,6 @@ import { buildRoadmap, diagnoseTest, planDailyTasks } from '../lib/ai'
    ============================================================ */
 
 export const strategyRoutes = new Hono<AppEnv>()
-
-// Paid feature — hard server-side gate for the AI strategy surface.
-// Scoped to the exact prefixes this router owns (/strategy, /ai) rather than
-// a blanket `*`, so root-mounting it doesn't shadow other routers' paths
-// (e.g. /admin/* must reach the RBAC roleGuard, not this paywall).
-strategyRoutes.use('/strategy/*', requireFeature('ai-strategy'))
-strategyRoutes.use('/ai/*', requireFeature('ai-strategy'))
 
 // AI endpoints are the most expensive: 10 req / min / user.
 strategyRoutes.use('/ai/*', rateLimit({

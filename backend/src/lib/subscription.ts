@@ -12,7 +12,7 @@ export type Plan = 'free' | 'pro' | 'enterprise'
 export type Feature = 'mock-tests' | 'adaptive-tests' | 'ai-strategy' | 'unlimited-revision'
 
 const PLAN_FEATURES: Record<Plan, Feature[]> = {
-  free: [],
+  free: ['mock-tests', 'adaptive-tests', 'ai-strategy', 'unlimited-revision'],
   pro: ['mock-tests', 'adaptive-tests', 'ai-strategy', 'unlimited-revision'],
   enterprise: ['mock-tests', 'adaptive-tests', 'ai-strategy', 'unlimited-revision'],
 }

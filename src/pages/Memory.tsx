@@ -2,11 +2,10 @@ import { motion } from 'framer-motion'
 import { RefreshCw, CalendarClock } from 'lucide-react'
 import { useAsync } from '@/lib/useAsync'
 import { api } from '@/lib/api'
-import { isFeatureLocked } from '@/lib/client'
-import { Card, Progress, Skeleton, Signal, Badge, UpgradeNotice } from '@/components/ui'
+import { Card, Progress, Skeleton, Signal, Badge } from '@/components/ui'
 
 export default function Memory() {
-  const { data: items, loading, errorObject } = useAsync(() => api.getRevisionItems())
+  const { data: items, loading } = useAsync(() => api.getRevisionItems())
 
   const due = items?.filter((i) => i.overdue) ?? []
   const upcoming = items?.filter((i) => !i.overdue) ?? []
@@ -20,8 +19,6 @@ export default function Memory() {
 
       {loading ? (
         <Skeleton className="h-64 rounded-2xl" />
-      ) : isFeatureLocked(errorObject) ? (
-        <UpgradeNotice feature="Memory Engine" />
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-3">

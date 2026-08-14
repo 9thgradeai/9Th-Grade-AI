@@ -12,8 +12,6 @@ import { diagnoseTest, recommendDifficulty } from '../lib/ai'
 import { realtime } from '../lib/realtime'
 import { sendEmail } from '../lib/email'
 import { cacheDel, cacheKey } from '../lib/cache'
-import { featureAllowed, lockedResponse } from '../middleware/featureGate'
-import { getPlan } from '../lib/subscription'
 
 /* ============================================================
    Test lifecycle — build, take, submit, grade.
@@ -73,17 +71,8 @@ testRoutes.post('/build', async (c) => {
   }
   const { examId, subjectId, topicId, count = 10, name, kind, adaptive } = parsed.data
 
-  // Paid feature gate first — a free user gets a clear 402 regardless of data.
   // Diagnostic / topic / subject practice stays free for all authenticated users.
   const effectiveKind = kind ?? (topicId ? 'topic' : examId ? 'diagnostic' : 'mock')
-  if (adaptive) {
-    const allowed = await featureAllowed(userId, 'adaptive-tests')
-    if (!allowed) return lockedResponse(c, 'adaptive-tests', await getPlan(userId))
-  }
-  if (effectiveKind === 'mock') {
-    const allowed = await featureAllowed(userId, 'mock-tests')
-    if (!allowed) return lockedResponse(c, 'mock-tests', await getPlan(userId))
-  }
 
   // Resolve scope. A more specific scope wins.
   let scopeWhere = {}

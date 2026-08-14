@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { prisma } from '../app'
 import type { AppEnv } from '../types/env'
-import { requireFeature } from '../middleware/featureGate'
 import { sm2, ensureInitialSchedule, ensureRevisionItems, isOverdue } from '../lib/sm2'
 
 /* ============================================================
@@ -11,9 +10,6 @@ import { sm2, ensureInitialSchedule, ensureRevisionItems, isOverdue } from '../l
    ============================================================ */
 
 export const revisionRoutes = new Hono<AppEnv>()
-
-// Paid feature — hard server-side gate for the entire revision surface.
-revisionRoutes.use('*', requireFeature('unlimited-revision'))
 
 function serialize(item: {
   id: string
