@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
@@ -8,13 +9,27 @@ import { Card, Signal } from '@/components/ui'
 import { AsyncGate } from '@/components/ui/AsyncGate'
 import { AIBriefingCard } from '@/components/dashboard'
 import {
-  ExamContextHeader,
-  CoreSummary,
-  MissionCard,
   SubjectPerformanceList,
-  buildMission,
 } from '@/components/dashboard/commandCenter'
+import {
+  AspirantCommandCenter,
+  ReadinessIntelligence,
+  TodaysMission,
+  ActiveLearningPath,
+  MemoryLedger,
+  CompetencyMatrix,
+  ExamIntelligence,
+  RecentActivity,
+  CareerOS,
+  CadreCoach,
+  NextBestAction,
+  SubjectWeaknessMap,
+  ConfidenceGap,
+  TelemetryStrip,
+} from '@/features/dashboard/components'
 import { BCS_PRELIMINARY, TOTAL_MARKS } from '@/lib/syllabus'
+import { getDashboardIntelligence } from '@/lib/dashboardIntelligence'
+import type { ReadinessSnapshot, ExamSchedule } from '@/lib/types'
 
 function hourGreeting() {
   const h = new Date().getHours()
@@ -34,8 +49,45 @@ export default function Dashboard() {
   const recommendations = useAsync(() => api.getAIRecommendations())
   const online = useOnline()
 
+  const intelligence = useMemo(() => getDashboardIntelligence(), [])
+
   const examName = roadmap.data?.examName ?? BCS_PRELIMINARY.name
   const memoryDue = revision.data?.filter((i) => i.overdue).length ?? 0
+
+  const schedule: ExamSchedule | undefined = roadmap.data
+    ? {
+        id: 'sched_current',
+        examId: roadmap.data.examId,
+        name: roadmap.data.examName,
+        organization: 'Bangladesh Public Service Commission',
+        examType: 'preliminary',
+        examDate: '', // populated from intelligence if available
+        status: 'upcoming',
+      }
+    : undefined
+
+  const readiness: ReadinessSnapshot | undefined = perf.data
+    ? {
+        projectedRank: null,
+        totalAspirants: 450000,
+        nationalPercentile: perf.data.percentile,
+        percentileStatus: 'estimated',
+        cutoffProbability: Math.min(95, perf.data.examReadiness + 5),
+        projectionStatus: 'estimated',
+        potentialScore: perf.data.potentialScore,
+        examReadiness: perf.data.examReadiness,
+        mastery: perf.data.mastery,
+        accuracy: perf.data.accuracy,
+        speed: perf.data.speed,
+        retention: perf.data.retention,
+        consistency: perf.data.consistency,
+        syllabusCoverage: perf.data.syllabusCoverage,
+        streakDays: perf.data.streakDays,
+        totalXP: 12840,
+        totalMCQs: 8421,
+        studyHours: 126,
+      }
+    : undefined
 
   return (
     <div className="space-y-6">
@@ -50,17 +102,59 @@ export default function Dashboard() {
         <Signal tone="success">System online</Signal>
       </div>
 
-      {/* Exam context */}
+      {/* Aspirant Command Center */}
       <AsyncGate loading={roadmap.loading} error={roadmap.error} data={roadmap.data} onRetry={roadmap.reload} offline={!online}>
-        {(rd) => <ExamContextHeader examName={rd.examName} daysRemaining={rd.daysRemaining} readiness={perf.data?.examReadiness} />}
+        {(rd) => (
+          <AspirantCommandCenter
+            schedule={{
+              id: schedule!.id,
+              examId: schedule!.examId,
+              name: schedule!.name,
+              organization: schedule!.organization,
+              examType: schedule!.examType,
+              examDate: rd.examDate,
+              status: schedule!.status,
+            }}
+            projectionLabel="estimated"
+          />
+        )}
       </AsyncGate>
 
-      {/* Core performance summary */}
+      {/* Telemetry Strip */}
       <AsyncGate loading={perf.loading} error={perf.error} data={perf.data} onRetry={perf.reload} offline={!online}>
-        {(p) => <CoreSummary perf={p} />}
+        {(p) => <TelemetryStrip telemetry={{ streakDays: p.streakDays, totalXP: 12840, totalMCQs: 8421, studyHours: 126, accuracy: p.accuracy, avgResponseTime: 42, currentMastery: p.mastery, revisionRetention: p.retention }} />}
       </AsyncGate>
 
-      {/* Mission + AI briefing */}
+      {/* Readiness Intelligence + Next Best Action */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <AsyncGate loading={perf.loading} error={perf.error} data={perf.data} onRetry={perf.reload} offline={!online}>
+            {(p) => (
+              <ReadinessIntelligence
+                readiness={{
+                  ...readiness!,
+                  examReadiness: p.examReadiness,
+                  mastery: p.mastery,
+                  accuracy: p.accuracy,
+                  speed: p.speed,
+                  retention: p.retention,
+                  consistency: p.consistency,
+                  syllabusCoverage: p.syllabusCoverage,
+                  streakDays: p.streakDays,
+                  potentialScore: p.potentialScore,
+                  nationalPercentile: p.percentile,
+                }}
+                projectionLabel="estimated"
+              />
+            )}
+          </AsyncGate>
+        </div>
+        <div>
+          <NextBestAction action={intelligence.nextBestAction} />
+        </div>
+      </div>
+
+      {/* Today's Mission + AI Coach */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AsyncGate
@@ -73,19 +167,55 @@ export default function Dashboard() {
             emptyTitle="No tasks yet"
             emptyBody="Your daily plan will appear here once you set your exam date and study time."
           >
-            {(tasksData) => <MissionCard items={buildMission(tasksData, subjects.data ?? [])} memoryDue={memoryDue} />}
+            {() => <TodaysMission mission={intelligence.mission} memoryDue={memoryDue} />}
           </AsyncGate>
         </div>
-
-        {/* AI briefing / strategy */}
-        <div className="space-y-4">
-          <AsyncGate loading={briefing.loading} error={briefing.error} data={briefing.data} onRetry={briefing.reload} offline={!online}>
-            {(b) => <AIBriefingCard briefing={b} />}
-          </AsyncGate>
+        <div>
+          <CadreCoach context={intelligence.coach.context} messages={intelligence.coach.messages} />
         </div>
       </div>
 
-      {/* Subjects + recommendations */}
+      {/* Active Learning Path + Subject Competency */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ActiveLearningPath competencies={intelligence.competencies} />
+        </div>
+        <div>
+          <CompetencyMatrix competencies={intelligence.competencies} />
+        </div>
+      </div>
+
+      {/* Subject Weakness Map + Exam Intelligence */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SubjectWeaknessMap weakestTopics={intelligence.weakestTopics} />
+        </div>
+        <div>
+          <ExamIntelligence notices={intelligence.notices} schedule={schedule} />
+        </div>
+      </div>
+
+      {/* Memory Ledger + Recent Activity */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <MemoryLedger memory={intelligence.memory} />
+        </div>
+        <div>
+          <RecentActivity activities={intelligence.activities} />
+        </div>
+      </div>
+
+      {/* Career OS + Confidence Gap */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <CareerOS milestones={intelligence.milestones} />
+        </div>
+        <div>
+          <ConfidenceGap diagnostic={intelligence.confidence} />
+        </div>
+      </div>
+
+      {/* Existing sections preserved for backward compatibility */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AsyncGate
@@ -101,9 +231,10 @@ export default function Dashboard() {
             {(subs) => <SubjectPerformanceList subjects={subs} totalMarks={TOTAL_MARKS} />}
           </AsyncGate>
         </div>
-
-        {/* AI recommendations */}
         <div className="space-y-3">
+          <AsyncGate loading={briefing.loading} error={briefing.error} data={briefing.data} onRetry={briefing.reload} offline={!online}>
+            {(b) => <AIBriefingCard briefing={b} />}
+          </AsyncGate>
           <AsyncGate
             loading={recommendations.loading}
             error={recommendations.error}
@@ -116,29 +247,29 @@ export default function Dashboard() {
           >
             {(recs) => (
               <>
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-faint">Recommended next</h2>
-              {recs.slice(0, 3).map((r, i) => (
-                <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-                  <Card className="flex flex-col gap-2 p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            r.severity === 'high' ? 'bg-danger' : r.severity === 'medium' ? 'bg-warning' : 'bg-success'
-                          }`}
-                        />
-                        {r.title}
-                      </span>
-                    </div>
-                    <p className="text-sm leading-snug text-muted">{r.body}</p>
-                    {r.actionRoute && (
-                      <Link to={r.actionRoute} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-hi hover:text-ink">
-                        {r.actionLabel ?? 'Open'} <ArrowRight size={14} />
-                      </Link>
-                    )}
-                  </Card>
-                </motion.div>
-              ))}
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-faint">Recommended next</h2>
+                {recs.slice(0, 3).map((r, i) => (
+                  <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                    <Card className="flex flex-col gap-2 p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              r.severity === 'high' ? 'bg-danger' : r.severity === 'medium' ? 'bg-warning' : 'bg-success'
+                            }`}
+                          />
+                          {r.title}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-snug text-muted">{r.body}</p>
+                      {r.actionRoute && (
+                        <Link to={r.actionRoute} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-hi hover:text-ink">
+                          {r.actionLabel ?? 'Open'} <ArrowRight size={14} />
+                        </Link>
+                      )}
+                    </Card>
+                  </motion.div>
+                ))}
               </>
             )}
           </AsyncGate>

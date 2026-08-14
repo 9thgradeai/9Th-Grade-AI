@@ -186,3 +186,204 @@ export interface AIBriefing {
   title: string
   items: string[]
 }
+
+/* ============================================================
+   Cadre Learning OS — extended domain models
+   ============================================================ */
+
+export type ProjectionStatus = 'estimated' | 'simulated' | 'insufficient-data' | 'live'
+
+export interface ExamSchedule {
+  id: string
+  examId: string
+  name: string
+  organization: string
+  examType: 'preliminary' | 'written' | 'viva' | 'other'
+  examDate?: string
+  applicationDeadline?: string
+  admitCardWindow?: { from: string; to: string }
+  status: 'upcoming' | 'open' | 'deadline-soon' | 'admit-card' | 'completed'
+  officialUrl?: string
+}
+
+export interface ExamBlueprint {
+  id: string
+  examId: string
+  name: string
+  organization: string
+  totalMarks: number
+  durationMinutes: number
+  negativeMarking: number
+  domains: ExamDomain[]
+}
+
+export interface ExamDomain {
+  id: string
+  examId: string
+  name: string
+  nameBn?: string
+  marks: number
+  weight: number
+  topics: ExamTopic[]
+}
+
+export interface ExamTopic {
+  id: string
+  domainId: string
+  name: string
+  nameBn?: string
+  subtopics: ExamSubtopic[]
+  questionCount: number
+  mastery: number
+  trend: number
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface ExamSubtopic {
+  id: string
+  topicId: string
+  name: string
+  questionCount: number
+}
+
+export interface ReadinessSnapshot {
+  projectedRank: number | null
+  totalAspirants: number
+  nationalPercentile: number
+  percentileStatus: ProjectionStatus
+  cutoffProbability: number
+  projectionStatus: ProjectionStatus
+  potentialScore: number
+  examReadiness: number
+  mastery: number
+  accuracy: number
+  speed: number
+  retention: number
+  consistency: number
+  syllabusCoverage: number
+  streakDays: number
+  totalXP: number
+  totalMCQs: number
+  studyHours: number
+}
+
+export interface SubjectCompetency {
+  id: string
+  examId: string
+  name: string
+  nameBn?: string
+  weight: number
+  mastery: number
+  accuracy: number
+  speed: number
+  retention: number
+  weeklyTrend: number
+  questionVolume: number
+  confidenceGap: number
+  priority: 'critical' | 'focus' | 'ontrack'
+  lastPracticed: string
+}
+
+export interface TopicCompetency {
+  id: string
+  subjectId: string
+  name: string
+  mastery: number
+  accuracy: number
+  speed: number
+  retention: number
+  reviewDue: number
+  priority: 'critical' | 'focus' | 'ontrack'
+  estimatedMinutes: number
+}
+
+export interface DashboardMission {
+  id: string
+  priority: 'high' | 'medium' | 'low'
+  title: string
+  subject: string
+  topic: string
+  kind: 'practice' | 'revision' | 'test' | 'review'
+  durationMinutes: number
+  expectedQuestions?: number
+  rationale: string
+  expectedImpact: 'high' | 'medium' | 'low'
+  actionRoute: string
+  actionLabel: string
+  status: 'pending' | 'done'
+}
+
+export interface ActivityEvent {
+  id: string
+  type: 'exam' | 'mastered' | 'revised' | 'tutor' | 'written' | 'viva' | 'milestone' | 'streak'
+  title: string
+  description: string
+  xp?: number
+  occurredAt: string
+}
+
+export interface OfficialNotice {
+  id: string
+  examId: string
+  title: string
+  status: 'open' | 'upcoming' | 'deadline-soon' | 'admit-card' | 'completed'
+  publishedAt: string
+  deadline?: string
+  sourceName: string
+  sourceUrl?: string
+  verifiedAt?: string
+}
+
+export interface CareerMilestone {
+  id: string
+  stage: 'preliminary' | 'written' | 'viva' | 'medical' | 'verification' | 'gazetted'
+  label: string
+  labelBn?: string
+  description: string
+  completed: boolean
+  current: boolean
+}
+
+export interface ConfidenceDiagnostic {
+  highConfidenceAccuracy: number
+  lowConfidenceAccuracy: number
+  highConfidenceCount: number
+  lowConfidenceCount: number
+  gap: number
+}
+
+export interface CoachContext {
+  targetExam: string
+  targetTrack: string
+  candidateArchetype: string
+  preparationPhase: string
+  weakSubjects: string[]
+  weakTopics: string[]
+  dueReviews: number
+  recentExamPerformance: number
+  currentLearningPath: string
+  readiness: number
+}
+
+export interface AspirantTelemetry {
+  streakDays: number
+  totalXP: number
+  totalMCQs: number
+  studyHours: number
+  accuracy: number
+  avgResponseTime: number
+  currentMastery: number
+  revisionRetention: number
+}
+
+export interface CadreCoachMessage {
+  role: 'user' | 'assistant'
+  content: string
+  actions?: CoachDirectAction[]
+}
+
+export interface CoachDirectAction {
+  label: string
+  route: string
+  icon?: string
+}
