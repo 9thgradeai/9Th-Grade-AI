@@ -75,6 +75,7 @@ jobs:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
