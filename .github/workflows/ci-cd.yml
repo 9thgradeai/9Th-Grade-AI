@@ -71,7 +71,7 @@ jobs:
       - name: Build
         run: npm run build
 
-  deploy:
+  publish:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
