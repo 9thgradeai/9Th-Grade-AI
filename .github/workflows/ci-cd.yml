@@ -92,6 +92,7 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel
+        continue-on-error: true
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
             echo "Vercel secrets missing; skipping deploy. Deploy manually with: npx vercel --prod --yes"
