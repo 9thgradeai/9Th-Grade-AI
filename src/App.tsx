@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { AppShell } from '@/components/layout/AppShell'
@@ -58,7 +58,7 @@ function ScrollToTop() {
 
 export default function App() {
   return (
-    <>
+    <BrowserRouter>
       <ScrollToTop />
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
@@ -108,7 +108,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
-    </>
+    </BrowserRouter>
   )
 }
 
