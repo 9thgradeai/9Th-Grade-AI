@@ -72,7 +72,6 @@ jobs:
         run: npm run build
 
   publish:
-    needs: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
