@@ -91,5 +91,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy placeholder
-        run: echo "Deploy step would run here"
+      - name: Deploy to Vercel
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "Vercel secrets missing; skipping deploy. Deploy manually with: npx vercel --prod --yes"
+          else
+            npx vercel@latest --prod --yes
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
