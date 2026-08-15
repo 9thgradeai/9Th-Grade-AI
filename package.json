@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && cd backend && npm install && npm run build:vercel",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma"
   },
   "dependencies": {
+    "@prisma/client": "^6.9.0",
     "@sentry/react": "^10.70.0",
     "framer-motion": "^13.0.0",
     "lucide-react": "^1.30.0",
@@ -34,6 +36,7 @@
     "oxlint": "^1.75.0",
     "playwright": "^1.62.1",
     "playwright-core": "^1.62.1",
+    "prisma": "^6.9.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",

@@ -27,3 +27,6 @@ dist-ssr
 # Lighthouse CI run artifacts
 .lighthouseci/
 .env*
+
+# Generated Vercel serverless function (built from backend/)
+api/index.js
