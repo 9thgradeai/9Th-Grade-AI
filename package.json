@@ -13,15 +13,25 @@
     "postinstall": "prisma generate --schema=backend/prisma/schema.prisma"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.0",
     "@prisma/client": "^6.9.0",
+    "@sentry/node": "^10.70.0",
     "@sentry/react": "^10.70.0",
+    "@upstash/redis": "^1.38.2",
+    "bcryptjs": "^2.4.3",
     "framer-motion": "^13.0.0",
+    "hono": "^4.8.0",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^1.30.0",
     "motion": "^12.43.0",
+    "prisma": "^6.9.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
-    "zod": "^4.4.3"
+    "resend": "^6.18.1",
+    "stripe": "^22.4.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
