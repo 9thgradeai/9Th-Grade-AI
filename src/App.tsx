@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense } from 'react'
+import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { AppShell } from '@/components/layout/AppShell'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import { ProtectedRoutes } from '@/app/router/protectedRoutes'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const Landing = lazy(() => import('@/pages/Landing'))
@@ -13,7 +13,6 @@ const ExamDetail = lazy(() => import('@/pages/ExamDetail'))
 const AIEngine = lazy(() => import('@/pages/AIEngine'))
 const Pricing = lazy(() => import('@/pages/Pricing'))
 const About = lazy(() => import('@/pages/About'))
-
 const Login = lazy(() => import('@/pages/Login'))
 const Register = lazy(() => import('@/pages/Register'))
 const Onboarding = lazy(() => import('@/pages/Onboarding'))
@@ -35,8 +34,9 @@ const Profile = lazy(() => import('@/pages/Profile'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const ComingSoon = lazy(() => import('@/pages/ComingSoon'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
+const SubjectOverview = lazy(() => import('@/pages/SubjectOverview'))
+const TopicOverview = lazy(() => import('@/pages/TopicOverview'))
 
-/** AI-flavoured loading fallback for code-split routes. */
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
@@ -49,11 +49,67 @@ function RouteFallback() {
 }
 
 function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => {
+  useLocation()
+  if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [pathname])
+  }
   return null
+}
+
+export default function App() {
+  return (
+    <>
+      <ScrollToTop />
+      <ErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route element={<PublicLayout />}>
+              <Route index element={<Landing />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/exams" element={<Exams />} />
+              <Route path="/exams/:slug" element={<ExamDetail />} />
+              <Route path="/exams/:examSlug/:stageSlug" element={<ExamDetail />} />
+              <Route path="/exams/:examSlug/:stageSlug/subjects/:subjectId" element={<SubjectOverview />} />
+              <Route path="/exams/:examSlug/:stageSlug/subjects/:subjectId/topics/:topicId" element={<TopicOverview />} />
+              <Route path="/ai-engine" element={<AIEngine />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/about" element={<About />} />
+            </Route>
+
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+
+            <Route path="/" element={<AppShell />}>
+              <Route element={<ProtectedRoutes />}>
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="subjects/:id" element={<Subject />} />
+                <Route path="topics/:id" element={<Topic />} />
+                <Route path="practice" element={<Practice />} />
+                <Route path="mock-tests" element={<MockTests />} />
+                <Route path="mock-tests/:id" element={<MockTest />} />
+                <Route path="results/:id" element={<Results />} />
+                <Route path="strategy" element={<Strategy />} />
+                <Route path="memory" element={<Memory />} />
+                <Route path="progress" element={<Progress />} />
+                <Route path="rank" element={<Rank />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="notices" element={<ComingSoon title="Noticeboard" description="Official exam notices, circulars and deadlines will live here." action={{ to: '/exams', label: 'Browse exam information' }} />} />
+                <Route path="career" element={<ComingSoon title="Career OS" description="Your recruitment journey — Preliminary → Written → Viva → Medical → Verification → Gazetted Appointment." action={{ to: '/profile', label: 'View profile' }} />} />
+                <Route path="written-viva" element={<ComingSoon title="Written & Viva" description="AI-evaluated written answers and mock viva practice will live here." action={{ to: '/practice', label: 'Practice instead' }} />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  )
 }
 
 function PublicLayout() {
@@ -67,60 +123,5 @@ function PublicLayout() {
         <Footer />
       </main>
     </>
-  )
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <ErrorBoundary>
-        <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route element={<PublicLayout />}>
-            <Route index element={<Landing />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/:slug" element={<ExamDetail />} />
-            <Route path="/ai-engine" element={<AIEngine />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/about" element={<About />} />
-          </Route>
-
-          {/* Auth — immersive, no chrome */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-
-          {/* Authenticated application — all routes gated by ProtectedRoute */}
-          <Route path="/" element={<AppShell />}>
-            <Route element={<ProtectedRoute />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="subjects/:id" element={<Subject />} />
-              <Route path="topics/:id" element={<Topic />} />
-              <Route path="practice" element={<Practice />} />
-              <Route path="mock-tests" element={<MockTests />} />
-              <Route path="mock-tests/:id" element={<MockTest />} />
-              <Route path="results/:id" element={<Results />} />
-              <Route path="strategy" element={<Strategy />} />
-              <Route path="memory" element={<Memory />} />
-              <Route path="progress" element={<Progress />} />
-              <Route path="rank" element={<Rank />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="notices" element={<ComingSoon title="Noticeboard" description="Official exam notices, circulars and deadlines will live here. No live data is shown until it can be sourced and verified from official channels." action={{ to: '/exams', label: 'Browse exam information' }} />} />
-              <Route path="career" element={<ComingSoon title="Career OS" description="Your recruitment journey — Preliminary → Written → Viva → Medical → Verification → Gazetted Appointment — plus target-cadre preferences will live here." action={{ to: '/profile', label: 'View profile' }} />} />
-              <Route path="written-viva" element={<ComingSoon title="Written & Viva" description="AI-evaluated written answers and mock viva practice will live here once the evaluation backend is wired up." action={{ to: '/practice', label: 'Practice instead' }} />} />
-            </Route>
-          </Route>
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
   )
 }
