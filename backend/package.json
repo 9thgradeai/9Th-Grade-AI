@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "vercel-build": "npm run build:vercel",
-    "build:vercel": "esbuild scripts/vercel-entry.ts --bundle --platform=node --format=esm --external:@prisma/client --external:prisma --external:util --external:events --external:stream --external:buffer --external:crypto --external:path --external:fs --external:os --external:url --external:http --external:https --external:zlib --external:string_decoder --external:punycode --external:querystring --external:assert --external:console --external:process --external:timers --external:domain --external:cluster --external:dgram --external:dns --external:net --external:readline --external:repl --external:tls --external:tty --external:v8 --external:vm --external:worker_threads --outfile=../api/index.js",
+    "build:vercel": "esbuild scripts/vercel-entry.ts --bundle --platform=node --format=esm --packages=external --outfile=../api/index.js",
     "postinstall": "prisma generate",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
